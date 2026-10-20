@@ -62,7 +62,7 @@ public sealed class TimeChart : Control
         var bar = Math.Min(48, slot * 0.62);
         var every = Math.Max(1, buckets.Length / 12);
         var spansYears = buckets[0].Start.Year != buckets[^1].Start.Year;
-        var english = CultureInfo.GetCultureInfo("en-GB");
+        var english = BritishEnglish.Culture;
         for (var index = 0; index < buckets.Length; index++)
         {
             var bucket = buckets[index];

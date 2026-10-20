@@ -111,7 +111,7 @@ public sealed class ActivityTests
             [
                 new()
                 {
-                    Identity = RepositoryResolver.PathIdentity("/tmp/spindle-activity-repos/beacon"), Name = "beacon", ProjectId = fixture.Projects[1].Id,
+                    Identity = RepositoryResolver.PathIdentity(AgentLogs.Repository("beacon")), Name = "beacon", ProjectId = fixture.Projects[1].Id,
                     WorkspaceId = fixture.Workspace, BranchRules = [new() { Pattern = "feature/*", ProjectId = fixture.Projects[3].Id, TaskId = support.Id }],
                 },
             ];

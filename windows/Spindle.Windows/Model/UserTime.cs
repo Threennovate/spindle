@@ -151,7 +151,7 @@ public readonly record struct ClockTime(int Hours, int Minutes)
 /// </summary>
 public sealed class UserTime
 {
-    private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-GB");
+    private static readonly CultureInfo English = BritishEnglish.Culture;
 
     public UserTime(TimeZoneInfo zone, int weekStart = 1, bool hour12 = false, DurationFormat durationFormat = DurationFormat.Hms)
     {

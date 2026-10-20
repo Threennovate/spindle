@@ -103,7 +103,8 @@ internal static class TestUi
     internal static async Task<MainWindow> SignedIn(ApiFixture fixture)
     {
         await fixture.SignIn();
-        var window = new MainWindow(fixture.Api, new PreferencesStore(Path.Combine(fixture.DataDirectory, "preferences.json")), fixture.DataDirectory);
+        // At the PC: a build machine's real idle time would hold reminders back.
+        var window = new MainWindow(fixture.Api, new PreferencesStore(Path.Combine(fixture.DataDirectory, "preferences.json")), fixture.DataDirectory, () => TimeSpan.Zero);
         window.Show();
         await WaitFor(() => Controls<TextBox>(window).Any(x => x.Name is "TimerDescription" or "RunningDescription"));
         await Task.Delay(50);
@@ -385,8 +386,22 @@ internal sealed class ApiFixture : HttpMessageHandler
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && Directory.Exists(DataDirectory)) Directory.Delete(DataDirectory, true);
+        if (disposing) DeleteDirectory(DataDirectory);
         base.Dispose(disposing);
+    }
+
+    /// <summary>
+    /// Deletes a test's folder, waiting a moment for a save still closing its file: Windows doesn't delete files that
+    /// are open.
+    /// </summary>
+    internal static void DeleteDirectory(string path)
+    {
+        for (var attempt = 1; Directory.Exists(path); attempt++)
+        {
+            try { Directory.Delete(path, true); }
+            catch (IOException) when (attempt < 20) { Thread.Sleep(50); }
+            catch (UnauthorizedAccessException) when (attempt < 20) { Thread.Sleep(50); }
+        }
     }
 
     internal static HttpResponseMessage Json<T>(T body) => new(HttpStatusCode.OK) { Content = JsonContent.Create(body, options: SpindleApiClient.JsonOptions) };
@@ -411,11 +426,17 @@ internal sealed class AgentLogs : IDisposable
         Copy(Path.Combine(fixtures, "claude"), Path.Combine(Home, ".claude"));
         Copy(Path.Combine(fixtures, "codex"), Path.Combine(Home, ".codex"));
         // The logs name these folders; each is a repository, as on the Mac that wrote them.
-        foreach (var name in new[] { "atlas", "beacon", "copper" }) Directory.CreateDirectory(Path.Combine("/tmp/spindle-activity-repos", name, ".git"));
+        foreach (var name in new[] { "atlas", "beacon", "copper" }) Directory.CreateDirectory(Path.Combine(Repository(name), ".git"));
         Environment.SetEnvironmentVariable("SPINDLE_AGENT_HOME", Home);
     }
 
     public string Home { get; }
+
+    /// <summary>
+    /// A repository the logs name, as this PC finds it: on Windows, <c>/tmp/spindle-activity-repos</c> is on the
+    /// current drive, so its identity has the drive in it.
+    /// </summary>
+    public static string Repository(string name) => Path.GetFullPath(Path.Combine("/tmp/spindle-activity-repos", name));
 
     /// <summary>The day the synthetic logs are on.</summary>
     public static DateOnly Day => new(2026, 9, 28);
@@ -433,7 +454,7 @@ internal sealed class AgentLogs : IDisposable
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SPINDLE_AGENT_HOME", previous);
-        Directory.Delete(Home, true);
+        ApiFixture.DeleteDirectory(Home);
     }
 }
 

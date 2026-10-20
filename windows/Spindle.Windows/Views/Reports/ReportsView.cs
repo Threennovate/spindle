@@ -711,7 +711,7 @@ public sealed class ReportsView : UserControl, ILoadable
         }, Grouping);
         var money = report.Totals.Amount is not null;
         var columns = "*," + string.Join(",", report.Days.Select(_ => "80")) + ",90" + (money ? ",100" : "");
-        var english = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+        var english = BritishEnglish.Culture;
         var header = new List<Control?> { Ui.Text(Grouping(WeeklyGroupBy), "caption", "medium", "secondary") };
         header.AddRange(report.Days.Select(d => Right(Ui.Text(d.ToString("ddd d", english), "caption", "medium", "secondary"))));
         header.Add(Right(Ui.Text("Total", "caption", "medium", "secondary")));

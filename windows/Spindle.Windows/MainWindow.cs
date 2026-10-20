@@ -51,7 +51,7 @@ public sealed class MainWindow : Window
     private ShellView? shell;
     private readonly ContentControl offerHost = new() { HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom, Margin = new Thickness(20, 0, 20, 76) };
 
-    public MainWindow(SpindleApiClient? client = null, PreferencesStore? store = null, string? dataDirectory = null)
+    public MainWindow(SpindleApiClient? client = null, PreferencesStore? store = null, string? dataDirectory = null, Func<TimeSpan?>? idle = null)
     {
         this.dataDirectory = dataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Spindle");
         api = client;
@@ -115,7 +115,7 @@ public sealed class MainWindow : Window
         ActivitySync = new ActivitySync(this, this.dataDirectory, Environment.GetEnvironmentVariable("SPINDLE_AGENT_HOME"));
         ActivitySync.Changed += () => Dispatcher.UIThread.Post(() => RefreshViews());
         Stopped += _ => ActivitySync.UploadSoon();
-        Desktop = new DesktopService(this);
+        Desktop = new DesktopService(this, idle);
         Desktop.OfferChanged += () => offerHost.Content = Desktop.Offer is { } offer ? new SplitOfferCard(this, offer)
             : Desktop.DriftOffer is { } drift ? new DriftOfferCard(this, drift) : null;
         ShowSignIn();
