@@ -27,6 +27,10 @@ export const ROUNDING_MINUTES = [1, 5, 6, 10, 12, 15, 30, 60] as const
 /** In the id filters, the empty id stands for "without", e.g. time without a project. */
 export const NONE_ID = '00000000-0000-0000-0000-000000000000'
 
+/** The views built into the web app (see views.ts); they are defined here, not stored. */
+export const VIEW_IDS = ['my-week', 'my-month', 'yesterday', 'billable-last-month', 'team-week', 'who-worked', 'billable-by-client', 'no-project'] as const
+export type ViewId = (typeof VIEW_IDS)[number]
+
 /**
  * A report as it is kept in the address bar, so it can be bookmarked, shared and saved. Everything is optional;
  * what is left out takes its default.
@@ -53,6 +57,8 @@ export interface ReportSearch {
   roundTo?: number
   /** The saved report being looked at, if any. */
   saved?: string
+  /** The built-in view being looked at, if any. */
+  view?: ViewId
 }
 
 export const DEFAULT_PERIOD: PeriodKey = 'thisWeek'
@@ -93,6 +99,7 @@ export function validateReportSearch(raw: Record<string, unknown>): ReportSearch
     rounding: oneOf(raw.rounding, ROUNDINGS),
     roundTo: (ROUNDING_MINUTES as readonly number[]).includes(roundTo) ? roundTo : undefined,
     saved: typeof raw.saved === 'string' && UUID.test(raw.saved) ? raw.saved : undefined,
+    view: oneOf(raw.view, VIEW_IDS),
   }
 }
 
@@ -113,20 +120,13 @@ export function reportFilter(search: ReportSearch, range: DayRange): ReportFilte
   }
 }
 
-/** What is saved with a report: everything but the page shown and the saved report itself. */
+/**
+ * What is saved with a report: everything but the page shown and the view it was opened from. The other apps read the
+ * same keys and drop any they don't know, so nothing else may go in here.
+ */
 export function savedParameters(search: ReportSearch): ReportSearch {
-  const { page: _page, saved: _saved, ...rest } = search
+  const { page: _page, saved: _saved, view: _view, ...rest } = search
   return Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined))
-}
-
-/** Whether anything narrows the report down beyond its period. */
-export function hasFilters(search: ReportSearch): boolean {
-  return !!(search.users || search.groups || search.projects || search.clients || search.tags || search.billable || search.q)
-}
-
-/** The search with every filter removed, keeping the period, grouping and rounding. */
-export function withoutFilters(search: ReportSearch): ReportSearch {
-  return { ...search, users: undefined, groups: undefined, projects: undefined, clients: undefined, tags: undefined, billable: undefined, q: undefined, page: undefined }
 }
 
 /** A saved report's settings, read as carefully as the address bar. */
@@ -138,8 +138,44 @@ export function parseSavedParameters(json: string): ReportSearch {
   }
 }
 
-/** Whether two reports show the same thing, whatever the order of their settings. */
+/**
+ * Whether two reports show the same thing, whatever the order of their settings or of the IDs in a filter, and whether
+ * a default is written out or left out.
+ */
 export function sameReport(a: ReportSearch, b: ReportSearch): boolean {
-  const normal = (search: ReportSearch) => JSON.stringify(Object.entries(savedParameters(search)).sort(([x], [y]) => x.localeCompare(y)))
-  return normal(a) === normal(b)
+  return JSON.stringify(normalReport(a)) === JSON.stringify(normalReport(b))
+}
+
+function normalReport(search: ReportSearch) {
+  const groupBy = search.groupBy ?? 'project'
+  const period = search.period ?? DEFAULT_PERIOD
+  const rounding = search.rounding ?? 'none'
+  const ids = (list?: string[]) => (list?.length ? [...list].sort() : null)
+  return [
+    search.tab ?? 'summary',
+    period,
+    period === 'custom' ? [search.from ?? null, search.to ?? null] : null,
+    ids(search.users),
+    ids(search.groups),
+    ids(search.projects),
+    ids(search.clients),
+    ids(search.tags),
+    search.billable ?? null,
+    search.q ?? null,
+    groupBy,
+    subGrouping(groupBy, search.subGroupBy),
+    search.sort ?? 'date',
+    search.asc ?? false,
+    rounding,
+    rounding === 'none' ? null : (search.roundTo ?? 15),
+  ]
+}
+
+/** What the summary groups each group's time by, if anything. */
+export function subGrouping(groupBy: ReportGrouping, subGroupBy: ReportSearch['subGroupBy']): ReportGrouping | null {
+  if (subGroupBy === 'none') {
+    return null
+  }
+  const sub = subGroupBy ?? DEFAULT_SUB_GROUPING
+  return sub === groupBy ? null : sub
 }

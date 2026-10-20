@@ -18,7 +18,7 @@ export function ReportTotalsCards({ totals, currency }: { totals: Totals; curren
   const billed = hasBilledTime(totals) ? (totals.billedSeconds ?? 0) : null
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-4">
       <Figure label="Total" value={duration(totals.seconds)} note={`${totals.entryCount} ${totals.entryCount === 1 ? 'entry' : 'entries'}`} />
       {billed === null ? (
         <Figure label="Billable" value={duration(totals.billableSeconds)} note={`${percent(totals.billableSeconds, totals.seconds)} of the total`} />
@@ -58,7 +58,7 @@ function Figure({ label, value, note }: { label: string; value: string; note: st
 export function ReportSkeleton() {
   return (
     <div className="grid gap-4" aria-busy="true" aria-label="Loading the report">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-4">
         <Skeleton className="h-24" />
         <Skeleton className="h-24" />
         <Skeleton className="h-24" />

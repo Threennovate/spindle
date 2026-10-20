@@ -57,36 +57,40 @@ test('an admin reads, narrows, saves and exports a summary', async ({ page }) =>
   await expect(breakdownRow(page, 'Planning')).toContainText('1:00:00')
 
   // Narrowed to one project, then back.
-  await page.getByRole('button', { name: 'Project', exact: true }).click()
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
+  await page.getByRole('option', { name: 'Project' }).click()
   await page.getByRole('option', { name: /Website/ }).click()
   await page.keyboard.press('Escape')
   await expect(figure(page, 'Total')).toHaveText('3:30:00')
   await expect(page).toHaveURL(/projects=/)
-  await page.getByRole('button', { name: 'Clear filters' }).click()
+  await expect(page.getByRole('button', { name: 'Project · Website' })).toBeVisible()
+  await page.getByRole('button', { name: 'Clear the project filter' }).click()
   await expect(figure(page, 'Total')).toHaveText('4:30:00')
 
-  // Saved, then opened again from anywhere.
-  await page.getByRole('button', { name: 'Saved reports' }).click()
-  await page.getByRole('menuitem', { name: 'Save this report…' }).click()
+  // Saved as a view, then opened again from anywhere.
+  await page.getByRole('button', { name: 'Save as a view…' }).click()
   await page.getByRole('dialog').getByLabel('Name').fill('August week by member')
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByRole('button', { name: 'August week by member' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'August week by member', level: 1 })).toBeVisible()
+  const views = page.getByRole('navigation', { name: 'Report views' })
 
+  // Reports opens the view opened last.
   await page.getByRole('link', { name: 'Entries' }).click()
   await page.getByRole('link', { name: 'Reports' }).click()
+  await expect(page.getByRole('heading', { name: 'August week by member', level: 1 })).toBeVisible()
+  await views.getByRole('button', { name: /^My week/ }).click()
   await expect(page.getByRole('button', { name: /^Period: This week/ })).toBeVisible()
-  await page.getByRole('button', { name: 'Saved reports' }).click()
-  await page.getByRole('menuitemcheckbox', { name: 'August week by member' }).click()
+  await expect(page.getByRole('button', { name: 'Whose time: Me' })).toBeVisible()
+  await views.getByRole('button', { name: 'August week by member' }).click()
   await expect(figure(page, 'Total')).toHaveText('4:30:00')
   await expect(breakdownRow(page, 'Ivo Ivić')).toBeVisible()
 
-  // A change shows until it is saved to the report.
+  // A change shows until it is saved to the view.
   await page.getByRole('combobox', { name: 'Group by' }).click()
   await page.getByRole('option', { name: 'Client' }).click()
-  await expect(page.getByRole('button', { name: /August week by member.*edited/ })).toBeVisible()
-  await page.getByRole('button', { name: /August week by member/ }).click()
-  await page.getByRole('menuitem', { name: 'Save changes to “August week by member”' }).click()
-  await expect(page.getByRole('button', { name: 'August week by member', exact: true })).toBeVisible()
+  await expect(page.getByText('Edited', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Edited', { exact: true })).toHaveCount(0)
 
   // Exported as a spreadsheet file.
   const download = page.waitForEvent('download')
@@ -138,6 +142,11 @@ test('members report on their own time, without money', async ({ page }) => {
 
   await expect(figure(page, 'Total')).toHaveText('1:30:00')
   await expect(page.getByText('Amount', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Member', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Whose time/ })).toHaveCount(0)
   await expect(breakdownRow(page, 'Website')).toContainText('1:30:00')
+
+  // Their own views, without the team's.
+  const views = page.getByRole('navigation', { name: 'Report views' })
+  await expect(views.getByRole('button', { name: /^My month/ })).toBeVisible()
+  await expect(views.getByRole('button', { name: 'Team this week' })).toHaveCount(0)
 })
