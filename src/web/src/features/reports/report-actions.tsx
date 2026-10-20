@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { Bookmark, Download, Loader2 } from 'lucide-react'
+import { ChevronDown, Download, Ellipsis, Loader2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { ApiError } from '@/api/problem'
@@ -8,121 +7,160 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { TextField } from '@/components/text-field'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { errorMessage } from '@/lib/error-message'
-import { savedReportsQuery, useDeleteSavedReport, useSaveReport, type ExportFormat, type SavedReport } from './queries'
-import { parseSavedParameters, savedParameters, sameReport, type ReportSearch } from './search'
+import { formatDayRange, PERIOD_LABELS, type DayRange, type PeriodKey } from './period'
+import { useDeleteSavedReport, useSaveReport, type ExportFormat, type SavedReport } from './queries'
+import { savedParameters, type ReportSearch } from './search'
+import type { BuiltInView } from './views'
 
-interface SavedReportsMenuProps {
+interface ViewActionsProps {
   workspaceId: string
   search: ReportSearch
-  onOpen: (report: SavedReport) => void
+  period: PeriodKey
+  range: DayRange
+  builtIn?: BuiltInView
+  savedReport?: SavedReport
+  edited: boolean
+  onReset: () => void
+  /** A view was saved, as a new one or over the one open. */
   onSaved: (report: SavedReport) => void
   onDeleted: () => void
 }
 
-/** Opens, saves, updates and deletes the person's own saved reports. */
-export function SavedReportsMenu({ workspaceId, search, onOpen, onSaved, onDeleted }: SavedReportsMenuProps) {
-  const { data: reports = [] } = useQuery(savedReportsQuery(workspaceId))
+type OpenDialog = 'save' | 'rename' | 'delete' | null
+
+/**
+ * What can be done with the view open: once it is changed, reset it or keep the change, over the person's own view or
+ * as a new one; and rename or delete a view of their own.
+ */
+export function ViewActions({ workspaceId, search, period, range, builtIn, savedReport, edited, onReset, onSaved, onDeleted }: ViewActionsProps) {
   const save = useSaveReport(workspaceId)
   const remove = useDeleteSavedReport(workspaceId)
-  const [naming, setNaming] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [dialog, setDialog] = useState<OpenDialog>(null)
 
-  const current = reports.find((report) => report.id === search.saved)
-  const changed = current ? !sameReport(parseSavedParameters(current.parameters), savedParameters(search)) : false
-
-  function update() {
-    if (!current) {
+  function saveChanges() {
+    if (!savedReport) {
       return
     }
     save.mutate(
-      { id: current.id, name: current.name, parameters: savedParameters(search) },
+      { id: savedReport.id, name: savedReport.name, parameters: savedParameters(search) },
       {
         onSuccess: (report) => {
           toast.success(`“${report.name}” saved`)
           onSaved(report)
         },
-        onError: (error) => toast.error(errorMessage(error, "Couldn't save the report.")),
+        onError: (error) => toast.error(errorMessage(error, "Couldn't save the view.")),
       },
     )
   }
 
+  const close = (open: boolean) => !open && setDialog(null)
+
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline">
-            <Bookmark />
-            <span className="max-w-48 truncate">{current ? current.name : 'Saved reports'}</span>
-            {changed && <span className="text-muted-foreground font-normal">· edited</span>}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
-          {reports.length > 0 && (
-            <>
-              <DropdownMenuLabel>Saved reports</DropdownMenuLabel>
-              {reports.map((report) => (
-                <DropdownMenuCheckboxItem key={report.id} checked={report.id === current?.id} onSelect={() => onOpen(report)}>
-                  <span className="truncate">{report.name}</span>
-                </DropdownMenuCheckboxItem>
-              ))}
-              <DropdownMenuSeparator />
-            </>
+      {edited && (
+        <Button variant="ghost" onClick={onReset}>
+          Reset
+        </Button>
+      )}
+      {savedReport
+        ? edited && (
+            <div className="flex items-center">
+              <Button variant="outline" className="rounded-r-none" disabled={save.isPending} onClick={saveChanges}>
+                Save
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="-ml-px rounded-l-none" aria-label="More ways to save">
+                    <ChevronDown />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setDialog('save')}>Save as a new view…</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )
+        : (edited || !builtIn) && (
+            <Button variant={edited ? 'default' : 'outline'} onClick={() => setDialog('save')}>
+              Save as a view…
+            </Button>
           )}
-          {current && (
-            <DropdownMenuItem disabled={!changed || save.isPending} onSelect={update}>
-              Save changes to “{current.name}”
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onSelect={() => setNaming(true)}>{current ? 'Save as a new report…' : 'Save this report…'}</DropdownMenuItem>
-          {current && (
-            <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
-              Delete “{current.name}”
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
 
-      <Dialog open={naming} onOpenChange={setNaming}>
+      {(savedReport || (builtIn && !edited)) && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label="More for this view">
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            {savedReport ? (
+              <>
+                <DropdownMenuItem onSelect={() => setDialog('rename')}>Rename…</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setDialog('save')}>Save as a new view…</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => setDialog('delete')}>
+                  Delete…
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem onSelect={() => setDialog('save')}>Save a copy as a view…</DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      <Dialog open={dialog === 'save' || dialog === 'rename'} onOpenChange={close}>
         <DialogContent className="sm:max-w-sm">
-          {naming && (
-            <SaveReportForm
-              initialName={current ? `${current.name} (copy)` : ''}
-              onSave={async (name) => {
-                const report = await save.mutateAsync({ name, parameters: savedParameters(search) })
+          {dialog === 'save' && (
+            <ViewForm
+              title="Save as a view"
+              description="Keeps the filters and grouping, so you can open it again in one click."
+              initialName={savedReport ? `${savedReport.name} (copy)` : (builtIn?.label ?? '')}
+              period={period}
+              range={range}
+              onSave={async (name, fixed) => {
+                const parameters = savedParameters(fixed ? { ...search, period: 'custom', from: range.from, to: range.to } : search)
+                const report = await save.mutateAsync({ name, parameters })
                 toast.success(`“${report.name}” saved`)
-                setNaming(false)
+                setDialog(null)
                 onSaved(report)
               }}
-              onCancel={() => setNaming(false)}
+              onCancel={() => setDialog(null)}
+            />
+          )}
+          {dialog === 'rename' && savedReport && (
+            <ViewForm
+              title="Rename the view"
+              initialName={savedReport.name}
+              onSave={async (name) => {
+                // Only the name changes, whatever is on screen.
+                const report = await save.mutateAsync({ id: savedReport.id, name, parameters: savedReport })
+                toast.success(`Renamed to “${report.name}”`)
+                setDialog(null)
+              }}
+              onCancel={() => setDialog(null)}
             />
           )}
         </DialogContent>
       </Dialog>
 
-      {current && (
+      {savedReport && (
         <ConfirmDialog
-          open={confirmDelete}
-          onOpenChange={setConfirmDelete}
-          title={`Delete “${current.name}”?`}
-          description="The saved report goes; the time in it stays."
+          open={dialog === 'delete'}
+          onOpenChange={close}
+          title={`Delete “${savedReport.name}”?`}
+          description="The view goes; the time in it stays."
           confirmLabel="Delete"
           onConfirm={() =>
-            remove.mutate(current.id, {
+            remove.mutate(savedReport.id, {
               onSuccess: () => {
-                toast.success(`“${current.name}” deleted`)
+                toast.success(`“${savedReport.name}” deleted`)
                 onDeleted()
               },
-              onError: (error) => toast.error(errorMessage(error, "Couldn't delete the report.")),
+              onError: (error) => toast.error(errorMessage(error, "Couldn't delete the view.")),
             })
           }
         />
@@ -131,20 +169,33 @@ export function SavedReportsMenu({ workspaceId, search, onOpen, onSaved, onDelet
   )
 }
 
-function SaveReportForm({ initialName, onSave, onCancel }: { initialName: string; onSave: (name: string) => Promise<void>; onCancel: () => void }) {
+interface ViewFormProps {
+  title: string
+  description?: string
+  initialName: string
+  /** The period on screen, to ask whether the view moves with time or keeps these days; left out when renaming. */
+  period?: PeriodKey
+  range?: DayRange
+  onSave: (name: string, fixed: boolean) => Promise<void>
+  onCancel: () => void
+}
+
+function ViewForm({ title, description, initialName, period, range, onSave, onCancel }: ViewFormProps) {
   const [name, setName] = useState(initialName)
+  const [fixed, setFixed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const moving = period !== undefined && period !== 'custom'
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!name.trim()) {
-      setError('Enter a name for the report.')
+      setError('Enter a name for the view.')
       return
     }
     setPending(true)
     try {
-      await onSave(name.trim())
+      await onSave(name.trim(), fixed || !moving)
     } catch (failure) {
       setError(failure instanceof ApiError ? (failure.fieldErrors.name?.[0] ?? failure.message) : CONNECTION_ERROR)
     } finally {
@@ -155,10 +206,23 @@ function SaveReportForm({ initialName, onSave, onCancel }: { initialName: string
   return (
     <form noValidate onSubmit={handleSubmit} className="grid gap-5">
       <DialogHeader>
-        <DialogTitle>Save report</DialogTitle>
-        <DialogDescription>Keeps the period, filters and grouping, so you can open this report again in one click.</DialogDescription>
+        <DialogTitle>{title}</DialogTitle>
+        {description && <DialogDescription>{description}</DialogDescription>}
       </DialogHeader>
       <TextField id="saved-report-name" label="Name" value={name} onChange={(e) => setName(e.target.value)} autoFocus error={error ?? undefined} placeholder="e.g. Monthly billing" />
+      {period && range && (
+        <fieldset className="grid gap-2">
+          <legend className="mb-2 text-sm font-medium">Period</legend>
+          {moving ? (
+            <>
+              <PeriodChoice checked={!fixed} onChange={() => setFixed(false)} label="Moves with time" detail={`Always ${PERIOD_LABELS[period].toLowerCase()}`} />
+              <PeriodChoice checked={fixed} onChange={() => setFixed(true)} label="Fixed" detail={formatDayRange(range)} />
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm">Fixed: {formatDayRange(range)}</p>
+          )}
+        </fieldset>
+      )}
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
@@ -168,6 +232,18 @@ function SaveReportForm({ initialName, onSave, onCancel }: { initialName: string
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+function PeriodChoice({ checked, onChange, label, detail }: { checked: boolean; onChange: () => void; label: string; detail: string }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2 text-sm">
+      <input type="radio" name="view-period" checked={checked} onChange={onChange} className="accent-primary mt-0.5 size-4" />
+      <span className="grid">
+        {label}
+        <span className="text-muted-foreground">{detail}</span>
+      </span>
+    </label>
   )
 }
 

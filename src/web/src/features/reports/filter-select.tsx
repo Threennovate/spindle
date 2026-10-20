@@ -5,75 +5,33 @@ import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { matchKeywords } from '../catalog/use-catalog'
+import type { FilterSection } from './filters'
 
-export interface FilterOption {
-  id: string
-  label: string
-  /** Shown after the label, e.g. a project's client. */
-  detail?: string
-  color?: string
-  keywords?: string[]
-}
-
-export interface FilterSection {
-  heading?: string
-  options: FilterOption[]
-}
-
-interface FilterSelectProps {
-  label: string
+interface FilterOptionsProps {
   sections: FilterSection[]
   selected: readonly string[]
   onChange: (selected: string[]) => void
   searchPlaceholder: string
-  icon?: ReactNode
 }
 
-/** A filter button that opens a searchable list to pick any number of options; it shows how many are picked. */
-export function FilterSelect({ label, sections, selected, onChange, searchPlaceholder, icon }: FilterSelectProps) {
-  const [open, setOpen] = useState(false)
+/** A searchable list to pick any number of options from. */
+export function FilterOptions({ sections, selected, onChange, searchPlaceholder }: FilterOptionsProps) {
   const chosen = new Set(selected)
-  const options = sections.flatMap((section) => section.options)
-  const names = options.filter((option) => chosen.has(option.id)).map((option) => option.label)
 
   function toggle(id: string) {
     onChange(chosen.has(id) ? selected.filter((value) => value !== id) : [...selected, id])
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <div className={cn('flex items-center rounded-md', selected.length > 0 && 'bg-primary/10')}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(selected.length > 0 && 'text-primary-text hover:text-primary-text')}
-            aria-label={selected.length ? `${label}: ${names.join(', ')}` : label}
-          >
-            {icon}
-            {label}
-            {selected.length > 0 && <span className="font-semibold tabular-nums">· {selected.length}</span>}
-            <ChevronDown className="opacity-60" />
-          </Button>
-        </PopoverTrigger>
-        {selected.length > 0 && (
-          <Button variant="ghost" size="icon-sm" className="text-primary-text hover:text-primary-text -ml-1" aria-label={`Clear the ${label.toLowerCase()} filter`} onClick={() => onChange([])}>
-            <X />
-          </Button>
-        )}
-      </div>
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command filter={matchKeywords}>
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
-            <CommandEmpty>Nothing matches.</CommandEmpty>
-            {sections.map((section, index) => (
-              <FilterGroup key={section.heading ?? index} section={section} chosen={chosen} onToggle={toggle} separated={index > 0} />
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Command filter={matchKeywords}>
+      <CommandInput placeholder={searchPlaceholder} />
+      <CommandList>
+        <CommandEmpty>Nothing matches.</CommandEmpty>
+        {sections.map((section, index) => (
+          <FilterGroup key={section.heading ?? index} section={section} chosen={chosen} onToggle={toggle} separated={index > 0} />
+        ))}
+      </CommandList>
+    </Command>
   )
 }
 
@@ -100,5 +58,52 @@ function FilterGroup({ section, chosen, onToggle, separated }: { section: Filter
         ))}
       </CommandGroup>
     </>
+  )
+}
+
+interface FilterChipProps {
+  /** What the filter does, e.g. "Project · Acme API, Acme Web". */
+  label: string
+  /** The filter's name, for the button that clears it. */
+  name: string
+  /** Clears the filter; without it the chip opens a list instead. */
+  onClear?: () => void
+  /** What opens when the chip is clicked, to change the filter; it is given a way to close itself. */
+  children: (close: () => void) => ReactNode
+  contentClassName?: string
+  icon?: ReactNode
+  /** Tinted while the filter narrows the report down. */
+  active?: boolean
+  /** For screen readers, when the label alone doesn't say which filter it is. */
+  'aria-label'?: string
+}
+
+/** A filter in use: it says what it does, opens to change it, and clears with ×. */
+export function FilterChip({ label, name, onClear, children, contentClassName, icon, active = true, 'aria-label': ariaLabel }: FilterChipProps) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className={cn('flex h-8 min-w-0 items-center rounded-lg', active ? 'bg-primary/15 text-primary-text' : 'bg-muted')}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            aria-label={ariaLabel}
+            className={cn('h-8 max-w-72 min-w-0 hover:bg-transparent aria-expanded:bg-transparent', active && 'text-primary-text hover:text-primary-text aria-expanded:text-primary-text')}
+          >
+            {icon}
+            <span className="truncate">{label}</span>
+            {!onClear && <ChevronDown className="opacity-60" />}
+          </Button>
+        </PopoverTrigger>
+        {onClear && (
+          <Button variant="ghost" size="icon-xs" className="text-primary-text hover:text-primary-text hover:bg-primary/15 mr-1 -ml-1.5" aria-label={`Clear the ${name} filter`} onClick={onClear}>
+            <X />
+          </Button>
+        )}
+      </div>
+      <PopoverContent className={cn('w-72 p-0', contentClassName)} align="start">
+        {children(() => setOpen(false))}
+      </PopoverContent>
+    </Popover>
   )
 }

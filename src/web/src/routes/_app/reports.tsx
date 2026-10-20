@@ -10,5 +10,5 @@ export const Route = createFileRoute('/_app/reports')({
 function ReportsRoute() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  return <ReportsPage search={search} onNavigate={(update) => void navigate({ search: update })} />
+  return <ReportsPage search={search} onNavigate={(update, options) => void navigate({ search: update, replace: options?.replace })} />
 }

@@ -55,9 +55,13 @@ export const savedReportsQuery = (workspaceId: string) =>
 export function useSaveReport(workspaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, name, parameters }: { id?: string; name: string; parameters: ReportSearch }) => {
-      // The kind tells other apps which report it is; the web app reads everything from the parameters.
-      const body = { name, kind: parameters.tab ?? 'summary', parameters: JSON.stringify(parameters) }
+    mutationFn: ({ id, name, parameters }: { id?: string; name: string; parameters: ReportSearch | SavedReport }) => {
+      // The kind tells other apps which report it is; the web app reads everything from the parameters. A saved
+      // report given whole, e.g. to rename it, keeps its settings exactly as they were stored.
+      const body =
+        'parameters' in parameters
+          ? { name, kind: parameters.kind, parameters: parameters.parameters }
+          : { name, kind: parameters.tab ?? 'summary', parameters: JSON.stringify(parameters) }
       return id
         ? unwrap(api.PUT('/api/workspaces/{workspaceId}/reports/saved/{reportId}', { params: { path: { workspaceId, reportId: id } }, body }))
         : unwrap(api.POST('/api/workspaces/{workspaceId}/reports/saved', { params: { path: { workspaceId } }, body }))
