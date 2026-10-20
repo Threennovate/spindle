@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runs the checks GitHub Actions runs on a pull request, on this Mac, for when Actions can't (e.g. no minutes left).
 #
-#   scripts/check.sh              what the branch changed since main: backend and web for src/ and tests/, the Mac
-#                                 app for apple/
+#   scripts/check.sh              what the branch changed since main (scripts/changed-parts.sh): the backend for
+#                                 src/ and tests/, web for src/web/, the Mac app for apple/
 #   scripts/check.sh all          everything
 #   scripts/check.sh backend web  only these (backend, web, mac, android)
 #
@@ -16,12 +16,9 @@ parts=("$@")
 if [[ ${#parts[@]} -eq 0 ]]; then
   base="$(git merge-base HEAD origin/main 2>/dev/null || echo origin/main)"
   changed="$( (git diff --name-only "$base"; git diff --name-only; git ls-files --others --exclude-standard) | sort -u)"
-  grep -qE '^(src/|tests/|Dockerfile|global\.json|Directory\.)' <<<"$changed" && parts+=(backend web)
-  grep -q '^windows/' <<<"$changed" && parts+=(windows)
-  grep -q '^apple/' <<<"$changed" && parts+=(mac)
-  grep -qE '^(android/|openapi/|\.github/workflows/android-)' <<<"$changed" && parts+=(android)
+  while IFS= read -r part; do parts+=("$part"); done < <(scripts/changed-parts.sh <<<"$changed")
   if [[ ${#parts[@]} -eq 0 ]]; then
-    echo "Nothing here needs checking: the branch changes neither src/, tests/, apple/ nor android/."
+    echo "Nothing here needs checking: the branch changes neither src/, tests/, apple/, windows/ nor android/."
     exit 0
   fi
 elif [[ "${parts[0]}" == "all" ]]; then

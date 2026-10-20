@@ -1,10 +1,10 @@
 name: Web and backend
 on:
   pull_request:
-    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml']
+    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml', 'scripts/changed-parts.sh']
   push:
     branches: [main]
-    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml']
+    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml', 'scripts/changed-parts.sh']
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +12,35 @@ concurrency:
   group: web-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # The paths above start the workflow; this decides which of its checks the change needs.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.parts.outputs.backend }}
+      web: ${{ steps.parts.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checks the changed paths need
+        id: parts
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          # Run everything when there is nothing to compare with: a manual run, a new branch or a rewritten history.
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch && -n "$BASE" && ! "$BASE" =~ ^0+$ ]] &&
+            git fetch --quiet --no-tags --depth=1 origin "$BASE"; then
+            parts="$(git diff --name-only "$BASE" HEAD | scripts/changed-parts.sh)"
+          else
+            parts=$'backend\nweb'
+          fi
+          echo "$parts"
+          for part in backend web; do
+            if grep -qx "$part" <<<"$parts"; then echo "$part=true"; else echo "$part=false"; fi >>"$GITHUB_OUTPUT"
+          done
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -34,6 +62,8 @@ jobs:
       - name: Backend tests against disposable PostgreSQL
         run: dotnet test --project tests/Spindle.Tests -p:SkipWebApp=true -p:OpenApiGenerateDocuments=false
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -52,8 +82,11 @@ jobs:
       - run: npm test
       - run: npm run build
   deploy:
-    needs: [backend, web]
-    if: github.repository == 'Threennovate/spindle' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [changes, backend, web]
+    # A check the change didn't need is skipped, which mustn't hold back the deployment; a failed one does.
+    if: >-
+      !failure() && !cancelled() && github.repository == 'Threennovate/spindle' &&
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: web-production
     timeout-minutes: 5
