@@ -1,0 +1,6 @@
+<resources>
+    <string name="shortcut_start">Start timer</string>
+    <string name="shortcut_start_long">Start a timer</string>
+    <string name="shortcut_stop">Stop timer</string>
+    <string name="shortcut_stop_long">Stop the running timer</string>
+</resources>

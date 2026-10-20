@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Spindle"><title>Spindle</title><filter id="sp-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.3"/></filter>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#0E1322" filter="url(#sp-shadow)"/>
+  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <g transform="translate(224 224) scale(9)"><rect x="29.7" y="2.3" width="4.6" height="8.6" rx="2.3" fill="#E9ECF2"/><rect x="21.5" y="14.1" width="21" height="4.6" rx="2.3" fill="#E9ECF2"/><rect x="15.5" y="21.9" width="33" height="4.6" rx="2.3" fill="#E9ECF2"/><rect x="11.5" y="29.7" width="41" height="4.6" rx="2.3" fill="#F7BE2B"/><rect x="15.5" y="37.5" width="33" height="4.6" rx="2.3" fill="#E9ECF2"/><rect x="21.5" y="45.3" width="21" height="4.6" rx="2.3" fill="#E9ECF2"/><rect x="29.7" y="53.1" width="4.6" height="8.6" rx="2.3" fill="#E9ECF2"/></g>
+</svg>

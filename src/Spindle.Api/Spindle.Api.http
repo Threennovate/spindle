@@ -1,0 +1,46 @@
+@api = http://localhost:5258/api
+
+### Register (also signs in)
+# @name register
+POST {{api}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "ana@example.com",
+  "password": "correct horse battery",
+  "fullName": "Ana Anić",
+  "timeZone": "Europe/Zagreb",
+  "deviceName": "REST client"
+}
+
+### Sign in
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@example.com",
+  "password": "correct horse battery",
+  "deviceName": "REST client"
+}
+
+### Current user, organizations and workspaces
+GET {{api}}/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Exchange the refresh token for a new pair
+# @name refresh
+POST {{api}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.$.refreshToken}}"
+}
+
+### Sign out this device
+POST {{api}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh.response.body.$.refreshToken}}"
+}

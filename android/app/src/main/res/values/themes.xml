@@ -1,0 +1,8 @@
+<resources>
+    <!-- The window behind Compose, as the app's page colour, so launching doesn't flash white in dark mode. -->
+    <style name="Theme.Spindle" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/spindle_page</item>
+        <item name="android:colorAccent">#8F5D04</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A security problem
+    url: https://github.com/Threennovate/spindle/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, by email, not in an issue.
+  - name: How to use Spindle
+    url: https://spindletrack.com/docs
+    about: Guides for the apps, agents, teams and self-hosting.

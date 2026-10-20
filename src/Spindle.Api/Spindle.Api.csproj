@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>spindle-api</UserSecretsId>
+    <!-- The OpenAPI document is regenerated on every build and committed, so API changes show up in diffs
+         and the web and Apple clients are generated from the same file. -->
+    <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\openapi</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name spindle</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="NodaTime" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Spindle.Infrastructure\Spindle.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Spindle.Tests" />
+  </ItemGroup>
+
+  <!-- Geist (SIL Open Font License, see OFL.txt) is built in, so PDF exports look the same on every server. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Reports\Export\Fonts\*.ttf" LogicalName="Fonts.%(FileName)%(Extension)" />
+    <EmbeddedResource Include="Reports\Export\Brand\*.png" LogicalName="Brand.%(FileName)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Development settings (a local mail catcher) stay out of what goes to the server. -->
+  <ItemGroup>
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <!-- dotnet publish builds the React app (src/web) and ships it in wwwroot, so one application serves both.
+       Pass -p:SkipWebApp=true to publish the API alone. -->
+  <PropertyGroup>
+    <WebAppRoot>$(MSBuildThisFileDirectory)..\web\</WebAppRoot>
+  </PropertyGroup>
+
+  <Target Name="PublishWebApp" AfterTargets="ComputeFilesToPublish" Condition="'$(SkipWebApp)' != 'true'">
+    <Exec WorkingDirectory="$(WebAppRoot)" Command="npm ci" />
+    <Exec WorkingDirectory="$(WebAppRoot)" Command="npm run build" />
+    <ItemGroup>
+      <WebAppFiles Include="$(WebAppRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(WebAppFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>

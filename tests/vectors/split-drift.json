@@ -1,0 +1,236 @@
+{
+  "about": "When the work changes after a running entry was split (SplitDrift). The Mac's Kit (SplitDriftVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases. Times are wall-clock times in timeZone; statedAt is when the entry's current split was set, and now is the moment it is checked. Projects and repositories are as in split-suggestions.json. expected is null when nothing changed; next is the split the new entry continues with.",
+  "timeZone": "Europe/Zagreb",
+  "projects": {
+    "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
+    "beacon": { "id": "0a000000-0000-4000-8000-000000000002", "name": "Beacon" },
+    "copper": { "id": "0a000000-0000-4000-8000-000000000003", "name": "Copper" }
+  },
+  "repositories": {
+    "atlas": { "identity": "origin:github.com/acme/atlas", "name": "atlas" },
+    "beacon": { "identity": "origin:gitlab.example.com/acme/beacon", "name": "beacon" },
+    "copper": { "identity": "path:5f1c0e8d2a7b4c6e9f0a1b2c3d4e5f60", "name": "copper" },
+    "zeta": { "identity": "origin:github.com/acme/zeta", "name": "zeta" }
+  },
+  "cases": [
+    {
+      "name": "a project whose agents went quiet ends the split where they stopped",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:10", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": { "quiet": ["atlas"], "at": "2026-09-14 09:30", "next": [{ "project": "beacon", "percent": 100 }] }
+    },
+    {
+      "name": "a split just set is not judged before its own quiet window has passed",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:10", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 10:15",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "the quiet window starts at the statement time",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:10", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:50",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 70 }, { "project": "beacon", "percent": 30 }]
+      },
+      "expected": { "quiet": ["atlas"], "at": "2026-09-14 09:50", "next": [{ "project": "beacon", "percent": 100 }] }
+    },
+    {
+      "name": "a part without agent attention is never judged",
+      "sessions": [
+        {
+          "id": "a",
+          "repository": "atlas",
+          "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 60 }, { "project": "copper", "percent": 40 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "one last prompt before everyone stopped makes nothing quiet",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:10", "2026-09-14 09:30"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "the rest keep their ratio when one of three goes quiet",
+      "sessions": [
+        {
+          "id": "a",
+          "repository": "atlas",
+          "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:05"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:15", "2026-09-14 09:25", "2026-09-14 09:35", "2026-09-14 09:45", "2026-09-14 09:55", "2026-09-14 10:05", "2026-09-14 10:15", "2026-09-14 10:25"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 30 }, { "project": "copper", "percent": 20 }]
+      },
+      "expected": { "quiet": ["copper"], "at": "2026-09-14 09:10", "next": [{ "project": "atlas", "percent": 63}, { "project": "beacon", "percent": 37}] }
+    },
+    {
+      "name": "several quiet projects end at the latest of them",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:15"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:05", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20", "2026-09-14 10:30", "2026-09-14 10:40", "2026-09-14 10:50"]
+        },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:10"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 11:00",
+        "parts": [{ "project": "atlas", "percent": 40 }, { "project": "beacon", "percent": 30 }, { "project": "copper", "percent": 30 }]
+      },
+      "expected": { "quiet": ["atlas", "copper"], "at": "2026-09-14 09:20", "next": [{ "project": "beacon", "percent": 100 }] }
+    },
+    {
+      "name": "a linked project outside the split joins it",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:25", "2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:05", "2026-09-14 09:15", "2026-09-14 09:35"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:00",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": {
+        "joined": "copper",
+        "at": "2026-09-14 09:20",
+        "next": [{ "project": "atlas", "percent": 34}, { "project": "beacon", "percent": 33}, { "project": "copper", "percent": 33}]
+      }
+    },
+    {
+      "name": "a repository without a project doesn't join",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:25", "2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:05", "2026-09-14 09:15", "2026-09-14 09:35"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:00",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "a link the person chose makes a repository join",
+      "chosen": { "zeta": "copper" },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:25", "2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:05", "2026-09-14 09:15", "2026-09-14 09:35"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:00",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": {
+        "joined": "copper",
+        "at": "2026-09-14 09:20",
+        "next": [{ "project": "atlas", "percent": 34}, { "project": "beacon", "percent": 33}, { "project": "copper", "percent": 33}]
+      }
+    },
+    {
+      "name": "attention before the statement time doesn't count towards joining",
+      "sessions": [
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30"] },
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:50"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:40",
+        "now": "2026-09-14 10:00",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "the earlier change is the one offered",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        {
+          "id": "b",
+          "repository": "beacon",
+          "touches": ["2026-09-14 09:10", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20"]
+        },
+        {
+          "id": "c",
+          "repository": "copper",
+          "touches": ["2026-09-14 09:35", "2026-09-14 09:45", "2026-09-14 09:55", "2026-09-14 10:05", "2026-09-14 10:15", "2026-09-14 10:25"]
+        }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:30",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": { "quiet": ["atlas"], "at": "2026-09-14 09:30", "next": [{ "project": "beacon", "percent": 100 }] }
+    }
+  ]
+}

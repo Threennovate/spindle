@@ -1,0 +1,16 @@
+/* The README header: 1280 x 640 at 2x, a rounded frame on a transparent ground so it sits on GitHub's light and dark
+   pages. Paper and midnight as on the landing page; Geist from the web app's packages, as in branding/store. */
+@font-face{font-family:Geist;src:url(../../src/web/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2);font-weight:100 900}
+
+:root{--bg:#F7F6F3; --fg:#0E1322; --fg-2:#454A59}
+[data-theme=dark]{--bg:#0E1322; --fg:#E9ECF2; --fg-2:rgba(233,236,242,.74)}
+
+*{box-sizing:border-box}
+html,body{margin:0;width:1280px;height:640px;background:transparent}
+body{font-family:Geist,ui-sans-serif,system-ui,sans-serif;color:var(--fg);-webkit-font-smoothing:antialiased}
+.frame{position:relative;width:1280px;height:640px;border-radius:24px;overflow:hidden;background:var(--bg)}
+[data-theme=light] .frame{box-shadow:inset 0 0 0 1px rgba(14,19,34,.06)}
+.logo{display:block}
+.logo-dark{display:none}
+[data-theme=dark] .logo-light{display:none}
+[data-theme=dark] .logo-dark{display:block}

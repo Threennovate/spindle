@@ -1,0 +1,17 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.jks
+*.keystore
+captures/
+
+# Android source sets are not .NET build output.
+!app/src/debug/
+!app/src/debug/**
+!app/src/release/
+!app/src/release/**
+keystore.properties
+
+# Store pictures, drawn again for each listing (docs/releasing.md#store-pictures).
+play/

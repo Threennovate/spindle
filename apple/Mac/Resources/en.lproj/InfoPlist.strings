@@ -1,0 +1,4 @@
+/* The name Finder, the Dock and Spotlight show. The bundle stays Spindle.app until the download moves to Spindle,
+   so updates keep replacing the copy people have. */
+"CFBundleDisplayName" = "Spindle";
+"CFBundleName" = "Spindle";

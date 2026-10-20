@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Spindle.Api/Spindle.Api.csproj" />
+    <Project Path="src/Spindle.Domain/Spindle.Domain.csproj" />
+    <Project Path="src/Spindle.Infrastructure/Spindle.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Spindle.Tests/Spindle.Tests.csproj" />
+  </Folder>
+</Solution>

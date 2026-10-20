@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Drawn by android/scripts/generate-brand.py from branding/. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="28.000" android:translateY="28.000" android:scaleX="0.8125" android:scaleY="0.8125">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M32.000,2.300h0.000a2.300,2.300 0 0 1 2.300,2.300v4.000a2.300,2.300 0 0 1 -2.300,2.300h-0.000a2.300,2.300 0 0 1 -2.300,-2.300v-4.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M23.800,14.100h16.400a2.300,2.300 0 0 1 2.300,2.300v0.000a2.300,2.300 0 0 1 -2.300,2.300h-16.400a2.300,2.300 0 0 1 -2.300,-2.300v-0.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M17.800,21.900h28.400a2.300,2.300 0 0 1 2.300,2.300v0.000a2.300,2.300 0 0 1 -2.300,2.300h-28.400a2.300,2.300 0 0 1 -2.300,-2.300v-0.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M13.800,29.700h36.400a2.300,2.300 0 0 1 2.300,2.300v0.000a2.300,2.300 0 0 1 -2.300,2.300h-36.400a2.300,2.300 0 0 1 -2.300,-2.300v-0.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M17.800,37.500h28.400a2.300,2.300 0 0 1 2.300,2.300v0.000a2.300,2.300 0 0 1 -2.300,2.300h-28.400a2.300,2.300 0 0 1 -2.300,-2.300v-0.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M23.800,45.300h16.400a2.300,2.300 0 0 1 2.300,2.300v0.000a2.300,2.300 0 0 1 -2.300,2.300h-16.400a2.300,2.300 0 0 1 -2.300,-2.300v-0.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M32.000,53.100h0.000a2.300,2.300 0 0 1 2.300,2.300v4.000a2.300,2.300 0 0 1 -2.300,2.300h-0.000a2.300,2.300 0 0 1 -2.300,-2.300v-4.000a2.300,2.300 0 0 1 2.300,-2.300z"/>
+    </group>
+</vector>

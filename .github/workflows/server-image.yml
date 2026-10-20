@@ -1,0 +1,112 @@
+name: Server image
+# Pushing a tag such as server-1.2.0 publishes the server image for self-hosting to ghcr.io/threennovate/spindle, tagged
+# 1.2.0, 1.2, 1 and latest, for amd64 and arm64. Each platform builds on its own runner, without emulation, and a last
+# job joins them under the same tags. See docs/self-hosting.md.
+# Only in the public repository: nothing is published from anywhere else.
+on:
+  push:
+    tags: ['server-*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag, e.g. server-1.2.0'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: server-image-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+  IMAGE: ghcr.io/threennovate/spindle
+jobs:
+  build:
+    if: github.repository == 'Threennovate/spindle'
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+      - name: Check the tag
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^server-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a server release tag: $RELEASE_TAG"; exit 1; }
+          git merge-base --is-ancestor HEAD origin/main || { echo "$RELEASE_TAG is not on main."; exit 1; }
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: |
+            org.opencontainers.image.title=Spindle
+            org.opencontainers.image.description=Spindle server: the API and the web app
+            org.opencontainers.image.source=https://github.com/Threennovate/spindle
+            org.opencontainers.image.licenses=AGPL-3.0-only
+            org.opencontainers.image.revision=${{ github.sha }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+      - name: Keep the digest for the last job
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    if: github.repository == 'Threennovate/spindle'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-*
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag both platforms as one image
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#server-}"
+          major="${version%%.*}"
+          minor="${version%.*}"
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            --tag "$IMAGE:$version" --tag "$IMAGE:$minor" --tag "$IMAGE:$major" --tag "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
+          docker buildx imagetools inspect "$IMAGE:$version"

@@ -1,0 +1,127 @@
+<!doctype html>
+<html data-theme="dark"><head><meta charset="utf-8">
+<link rel="stylesheet" href="shared.css"><script src="theme.js"></script>
+<style>
+/* The README header: the App Store header's moment (branding/store/store-art.mjs, header()): three threads of parallel work run into
+   one entry's split bar and leave it each its own way. The entry is the running timer, with its stop button
+   (as in the Mac menu bar and the iPhone Live Activity), so the picture reads as a time tracker first. Here with the logo above and the line below, at u = 0.46 of the
+   store header's scale. Same colours as the store pictures and the demo data. */
+:root{--u:.46px;--card:#FFFFFF;--title:#0E1322;--meta:#5F6474;--stop:#F04438;--ring:#F7F6F3;
+  --blue:#2D6BE0;--pink:#D0477F;--green:#2F9E44;--blue-t:#1C4DAA;--pink-t:#9C2A5B;--green-t:#1E6E2E}
+[data-theme=dark]{--card:#1A2033;--title:#F2F4F8;--meta:#8E95A6;--ring:#0E1322;
+  --blue-t:#6C9BF2;--pink-t:#E57FA8;--green-t:#5CC071}
+.frame{background:var(--bg)}
+[data-theme=dark] .frame{background:radial-gradient(55% 85% at 50% 48%,#1C2848 0%,#121A30 50%,#0E1322 100%)}
+[data-theme=light] .frame{background:radial-gradient(55% 85% at 50% 48%,#FFFFFF 0%,#F9F8F5 55%,#F2F0EA 100%)}
+svg{position:absolute;inset:0;width:1280px;height:640px}
+.logo{position:absolute;left:50%;top:52px;height:40px;transform:translateX(-50%)}
+.line{position:absolute;left:0;right:0;top:540px;text-align:center}
+.line h1{margin:0;font-size:34px;line-height:1.1;font-weight:640;letter-spacing:-.03em;color:var(--fg)}
+.card{position:absolute;left:50%;top:300px;width:calc(var(--u)*1840);transform:translate(-50%,-50%);
+  padding:calc(var(--u)*72) calc(var(--u)*100) calc(var(--u)*92);border-radius:calc(var(--u)*84);background:var(--card);
+  font-family:-apple-system,"SF Pro Text",system-ui,sans-serif}
+[data-theme=dark] .card{box-shadow:0 0 0 1px rgba(255,255,255,.07) inset,0 34px 68px rgba(0,0,0,.45),0 8px 21px rgba(0,0,0,.3)}
+[data-theme=light] .card{box-shadow:0 0 0 1px rgba(14,19,34,.08),0 34px 68px -20px rgba(14,19,34,.22),0 8px 21px -10px rgba(14,19,34,.14)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:calc(var(--u)*60)}
+.status{display:flex;align-items:center;gap:.45em;margin-bottom:calc(var(--u)*18);font-size:calc(var(--u)*50);color:var(--meta);font-variant-numeric:tabular-nums}
+.live{width:.5em;height:.5em;border-radius:50%;background:var(--stop);box-shadow:0 0 0 .22em color-mix(in srgb,var(--stop) 22%,transparent)}
+.clock{display:flex;align-items:center;gap:calc(var(--u)*48);flex:none}
+.stop{width:calc(var(--u)*124);height:calc(var(--u)*124);border-radius:50%;background:var(--stop);display:grid;place-items:center;flex:none;
+  box-shadow:0 calc(var(--u)*10) calc(var(--u)*30) color-mix(in srgb,var(--stop) 40%,transparent)}
+.stop i{width:calc(var(--u)*40);height:calc(var(--u)*40);border-radius:calc(var(--u)*8);background:#fff}
+.title{white-space:nowrap;font-size:calc(var(--u)*90);line-height:1.18;color:var(--title);letter-spacing:-.01em}
+.duration{font-size:calc(var(--u)*104);font-weight:600;color:var(--title);font-variant-numeric:tabular-nums}
+.meta{margin-top:calc(var(--u)*28);font-size:calc(var(--u)*60);color:var(--meta);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:.5em;height:.5em;border-radius:50%;margin-right:.38em;vertical-align:.06em}
+.sep{margin:0 .35em}
+.bar{display:flex;gap:calc(var(--u)*14);margin-top:calc(var(--u)*64);height:calc(var(--u)*30)}
+.bar span{border-radius:calc(var(--u)*15)}
+</style></head><body><div class="frame">
+  <svg id="under" viewBox="0 0 1280 640"></svg>
+  <img class="logo logo-light" src="../spindle-logo-light.svg" alt="">
+  <img class="logo logo-dark" src="../spindle-logo-dark.svg" alt="">
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="status"><span class="live"></span>Running since 09:52</div>
+        <div class="title">Checkout and webhooks</div>
+      </div>
+      <div class="clock"><div class="duration">1:20:07</div><div class="stop"><i></i></div></div>
+    </div>
+    <div class="meta"><span class="dot" style="background:var(--blue)"></span><span style="color:var(--blue-t)">Acme API</span>&nbsp;50%<span class="sep">·</span><span class="dot" style="background:var(--pink)"></span><span style="color:var(--pink-t)">Acme Web</span>&nbsp;30%<span class="sep">·</span><span class="dot" style="background:var(--green)"></span><span style="color:var(--green-t)">Birch</span>&nbsp;20%</div>
+    <div class="bar"><span style="flex:50;background:var(--blue)"></span><span style="flex:30;background:var(--pink)"></span><span style="flex:20;background:var(--green)"></span></div>
+  </div>
+  <svg id="over" viewBox="0 0 1280 640"></svg>
+  <div class="line"><h1>The open-source time tracker for parallel work.</h1></div>
+</div>
+<script>
+// The store header's threads (headerThreads in store-art.mjs), laid out around this card.
+const W = 1280, H = 640, u = .46
+const css = getComputedStyle(document.documentElement)
+const c = (name) => css.getPropertyValue(name).trim()
+const blue = c('--blue'), pink = c('--pink'), green = c('--green'), ring = c('--ring'), marigold = '#F0B21B'
+const NS = 'http://www.w3.org/2000/svg'
+const el = (parent, name, attrs) => {
+  const node = document.createElementNS(NS, name)
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v)
+  parent.appendChild(node)
+  return node
+}
+// Centripetal Catmull–Rom, as in branding/store/threads.js.
+function smooth(points) {
+  const dist = (a, b) => Math.max(Math.hypot(b[0] - a[0], b[1] - a[1]) ** 0.5, 1e-3)
+  let d = `M ${points[0][0]} ${points[0][1]}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i], p2 = points[i + 1]
+    const p0 = points[i - 1] ?? [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]]
+    const p3 = points[i + 2] ?? [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]]
+    const d1 = dist(p0, p1), d2 = dist(p1, p2), d3 = dist(p2, p3)
+    const c1 = [0, 1].map((k) => (d1 * d1 * p2[k] - d2 * d2 * p0[k] + (2 * d1 * d1 + 3 * d1 * d2 + d2 * d2) * p1[k]) / (3 * d1 * (d1 + d2)))
+    const c2 = [0, 1].map((k) => (d3 * d3 * p1[k] - d2 * d2 * p3[k] + (2 * d3 * d3 + 3 * d3 * d2 + d2 * d2) * p2[k]) / (3 * d3 * (d3 + d2)))
+    d += ` C ${c1} ${c2} ${p2}`
+  }
+  return d
+}
+const stroke = (parent, d, color, extra = {}) =>
+  el(parent, 'path', { d, fill: 'none', stroke: color, 'stroke-width': 10 * u, 'stroke-linecap': 'round', ...extra })
+const under = document.getElementById('under'), over = document.getElementById('over')
+const card = document.querySelector('.card').getBoundingClientRect()
+const bar = document.querySelector('.bar').getBoundingClientRect()
+const y = bar.top + bar.height / 2
+const L = card.left, R = card.right, g = 100 * u
+const left = (f) => f * L
+const right = (f) => R + f * (W - R)
+// Heights as fractions of a band around the bar, so the threads swing around it rather than the frame.
+const span = 340, bandTop = y - .58 * span
+const Y = (f) => bandTop + f * span
+// Each comes in from the frame's edge in one slow turn and runs level for a moment beside the card.
+const into = (a, b) => smooth([[-40, Y(a)], [left(.5), Y(b)], [L - g, y], [bar.left + 10, y]])
+const out = (a, b) => smooth([[bar.right - 10, y], [R + g, y], [right(.5), Y(a)], [W + 40, Y(b)]])
+const blueIn = into(.18, .3), pinkIn = into(1, .86), greenIn = into(.6, .66)
+const blueOut = out(.28, .1), pinkOut = out(.86, .98), greenOut = out(.66, .58)
+const pairs = [[greenIn, green], [greenOut, green], [blueIn, blue], [pinkIn, pink], [blueOut, blue], [pinkOut, pink]]
+for (const [d, color] of pairs) stroke(under, d, color)
+// Over the card's padding, so the threads visibly reach the bar.
+const clip = el(el(over, 'defs', {}), 'clipPath', { id: 'edges' })
+el(clip, 'rect', { x: L - 4, y: 0, width: bar.left - L + 14, height: H })
+el(clip, 'rect', { x: bar.right - 10, y: 0, width: R - bar.right + 14, height: H })
+for (const [d, color] of pairs) stroke(over, d, color, { 'clip-path': 'url(#edges)' })
+// The still header's dots: prompts along green, one on each of the others, the running timer in marigold on the way out.
+const along = (d, fractions, color, r) => {
+  const path = stroke(under, d, 'none')
+  const length = path.getTotalLength()
+  for (const f of fractions) {
+    const p = path.getPointAtLength(length * f)
+    el(under, 'circle', { cx: p.x, cy: p.y, r: (r + 8) * u, fill: ring })
+    el(under, 'circle', { cx: p.x, cy: p.y, r: r * u, fill: color })
+  }
+}
+along(greenIn, [.2, .27, .34], green, 10)
+along(blueIn, [.42], blue, 16)
+along(pinkIn, [.2], pink, 16)
+along(pinkOut, [.62], pink, 16)
+along(greenOut, [.66, .73, .8], green, 10)
+along(blueOut, [.78], marigold, 18)
+along(blueOut, [.45], blue, 12)
+</script>
+</body></html>

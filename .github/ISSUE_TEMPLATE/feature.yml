@@ -1,0 +1,23 @@
+name: Idea
+description: Something Spindle could do, or do better.
+labels: [idea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [docs/principles.md](https://github.com/Threennovate/spindle/blob/main/docs/principles.md) says what Spindle is for and what it deliberately doesn't do, such as tracking apps or windows. It helps to read it first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The situation and what gets in the way, rather than a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: textarea
+    id: now
+    attributes:
+      label: How you handle it now

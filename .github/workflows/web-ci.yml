@@ -1,0 +1,75 @@
+name: Web and backend
+on:
+  pull_request:
+    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'tests/**', 'Dockerfile', 'global.json', 'Directory.*', '.github/workflows/web-ci.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: ci-tests-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      ConnectionStrings__PostgresTests: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=ci-tests-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Backend tests against disposable PostgreSQL
+        run: dotnet test --project tests/Spindle.Tests -p:SkipWebApp=true -p:OpenApiGenerateDocuments=false
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  deploy:
+    needs: [backend, web]
+    if: github.repository == 'Threennovate/spindle' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: web-production
+    timeout-minutes: 5
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Queue deployment after checks pass
+        run: |
+          set -euo pipefail
+          test -n "$COOLIFY_TOKEN" && test -n "$COOLIFY_DEPLOY_WEBHOOK" || { echo 'Configure the web-production deploy token and webhook first.'; exit 1; }
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$latest" != "$GITHUB_SHA" ]]; then
+            echo 'A newer main commit exists; its checks will handle deployment.'
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 30 \
+            --header "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_DEPLOY_WEBHOOK"

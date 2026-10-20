@@ -1,0 +1,46 @@
+name: Mac checks
+on:
+  pull_request:
+    paths: &mac-paths
+      - 'apple/**'
+      # Only the iPhone app and its extensions use these, and docs build into nothing.
+      - '!apple/iOS/**'
+      - '!apple/iOSTests/**'
+      - '!apple/iOSUITests/**'
+      - '!apple/LiveActivity/**'
+      - '!apple/Widgets/**'
+      - '!apple/scripts/release-ios.sh'
+      - '!apple/**/*.md'
+      - '.github/workflows/mac-*.yml'
+  push:
+    branches: [main]
+    paths: *mac-paths
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mac-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test release publishing
+        run: python3 -m unittest discover -s apple/scripts -p 'test_*.py'
+      - name: Test shared library
+        run: swift test --package-path apple/SpindleKit
+      - name: Test Mac app without distribution credentials
+        run: >-
+          xcodebuild test -quiet -project apple/Spindle.xcodeproj
+          -scheme SpindleMac -destination 'platform=macOS'
+          -onlyUsePackageVersionsFromResolvedFile
+          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS= ENABLE_HARDENED_RUNTIME=NO
+      # The iPhone app shares the library, so a Mac-only API in it (such as Process) breaks the iPhone build.
+      - name: Build iPhone app
+        run: >-
+          xcodebuild build -quiet -project apple/Spindle.xcodeproj
+          -scheme SpindleiOS -destination 'generic/platform=iOS Simulator'
+          -onlyUsePackageVersionsFromResolvedFile
+          CODE_SIGNING_ALLOWED=NO

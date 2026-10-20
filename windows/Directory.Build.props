@@ -1,0 +1,12 @@
+<Project>
+  <Import Project="../Directory.Build.props" />
+  <PropertyGroup>
+    <!-- The Windows app's version. Raising it with windows/ReleaseNotes/X.Y.Z.md is what windows/scripts/publish-windows.sh releases. -->
+    <Version>1.2.1</Version>
+    <!-- Where installed copies look for updates: Spindle Cloud's downloads, as the Mac app's feed. -->
+    <SpindleUpdatesUrl>https://app.spindletrack.com/downloads/spindle-windows</SpindleUpdatesUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="SpindleUpdatesUrl" Value="$(SpindleUpdatesUrl)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,281 @@
+{
+  "about": "Agent log lines and the sessions the Kit's and Windows' parsers read from them. Lines are synthetic; text marked secret must never appear in what they keep.",
+  "secret": "secret",
+  "cases": [
+    {
+      "name": "claude: only real prompts are touches; subagents, tool results and metadata aren't",
+      "source": "claude",
+      "lines": [
+        "{\"type\":\"user\",\"sessionId\":\"a\",\"cwd\":\"/repo\",\"gitBranch\":\"main\",\"timestamp\":\"2026-09-28T07:00:00Z\",\"message\":{\"content\":\"Implement this\\nsecret prompt body\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"a\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:00:30Z\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"secret answer\"}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"a\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:01:00Z\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"text\":\"secret result\"}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"a\",\"cwd\":\"/elsewhere\",\"isSidechain\":true,\"timestamp\":\"2026-09-28T07:02:00Z\",\"message\":{\"content\":\"secret agent prompt\"}}",
+        "{\"type\":\"user\",\"sessionId\":\"a\",\"cwd\":\"/repo\",\"isMeta\":true,\"timestamp\":\"2026-09-28T07:03:00Z\",\"message\":{\"content\":\"secret meta\"}}",
+        "{\"type\":\"user\",\"sessionId\":\"a\",\"cwd\":\"/repo\",\"promptSource\":\"system\",\"timestamp\":\"2026-09-28T07:04:00Z\",\"message\":{\"content\":\"secret system\"}}",
+        "broken line"
+      ],
+      "sessions": [
+        {
+          "id": "claude:a",
+          "parent": null,
+          "cwd": "/repo",
+          "title": "Implement this",
+          "branches": [
+            "main"
+          ],
+          "touches": [
+            "2026-09-28T07:00:00Z"
+          ],
+          "events": 6
+        }
+      ]
+    },
+    {
+      "name": "claude: a prompt whose turn only calls Spindle's tools is no touch",
+      "source": "claude",
+      "lines": [
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:00:00Z\",\"message\":{\"content\":\"Describe today's entries\\nin detail\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:01:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"ToolSearch\",\"input\":{}}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:02:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindle__list_entries\",\"input\":{}}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:03:00Z\",\"message\":{\"content\":[{\"tool_use_id\":\"t\",\"type\":\"tool_result\",\"content\":\"ok\"}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:04:00Z\",\"isSidechain\":true,\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"Bash\",\"input\":{}}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:05:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindle__update_entries\",\"input\":{}}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:10:00Z\",\"message\":{\"content\":\"Fix the login bug\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:11:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindle__get_timer\",\"input\":{}}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:12:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"Edit\",\"input\":{}}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:13:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindle__get_timer\",\"input\":{}}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:20:00Z\",\"message\":{\"content\":\"What is the time?\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:21:00Z\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Noon\"}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:30:00Z\",\"message\":{\"content\":\"Search the web, then my entries\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:31:00Z\",\"message\":{\"content\":[{\"type\":\"server_tool_use\",\"id\":\"w\",\"name\":\"web_search\",\"input\":{}}]}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:32:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindle__list_entries\",\"input\":{}}]}}",
+        "{\"type\":\"user\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:40:00Z\",\"message\":{\"content\":\"Somebody else's server\"}}",
+        "{\"type\":\"assistant\",\"sessionId\":\"s\",\"cwd\":\"/repo\",\"timestamp\":\"2026-09-28T07:41:00Z\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"mcp__spindlewood__list\",\"input\":{}}]}}",
+        "{\"type\":\"custom-title\",\"sessionId\":\"s\",\"customTitle\":\"A chosen title\"}"
+      ],
+      "sessions": [
+        {
+          "id": "claude:s",
+          "parent": null,
+          "cwd": "/repo",
+          "title": "A chosen title",
+          "branches": [],
+          "touches": [
+            "2026-09-28T07:10:00Z",
+            "2026-09-28T07:20:00Z",
+            "2026-09-28T07:30:00Z",
+            "2026-09-28T07:40:00Z"
+          ],
+          "events": 17
+        }
+      ]
+    },
+    {
+      "name": "codex: task_started is the prompt; Spindle-only turns, also in code mode, aren't",
+      "source": "codex",
+      "lines": [
+        "{\"type\":\"session_meta\",\"payload\":{\"id\":\"s\",\"cwd\":\"/repo\",\"source\":\"cli\",\"git\":{\"branch\":\"main\"}}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:00:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:00:00Z\",\"payload\":{\"type\":\"user_message\",\"message\":\"Describe my day\\nsecret detail\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:00:01Z\",\"payload\":{\"type\":\"function_call\",\"name\":\"list_entries\",\"namespace\":\"mcp__spindle\",\"arguments\":\"{}\"}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:10:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:10:01Z\",\"payload\":{\"type\":\"function_call\",\"name\":\"mcp__spindle__get_timer\",\"arguments\":\"{}\"}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:20:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:20:01Z\",\"payload\":{\"type\":\"function_call\",\"name\":\"list_entries\",\"namespace\":\"mcp__spindle\",\"arguments\":\"{}\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:20:02Z\",\"payload\":{\"type\":\"function_call\",\"name\":\"exec_command\",\"arguments\":\"{\\\"cmd\\\":\\\"secret command\\\"}\"}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:30:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:30:01Z\",\"payload\":{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"secret answer\"}]}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:40:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:40:01Z\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"exec\",\"input\":\"text(await tools.clock__curr_time({}));\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:40:03Z\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"exec\",\"input\":\"await tools.mcp__spindle__get_timer({});\"}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:50:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:50:01Z\",\"payload\":{\"type\":\"custom_tool_call\",\"name\":\"exec\",\"input\":\"await tools.mcp__spindle__list_entries({}); await tools.exec_command({cmd: 'ls'});\"}}"
+      ],
+      "sessions": [
+        {
+          "id": "codex:s",
+          "parent": null,
+          "cwd": "/repo",
+          "title": "Describe my day",
+          "branches": [
+            "main"
+          ],
+          "touches": [
+            "2026-09-28T07:20:00Z",
+            "2026-09-28T07:30:00Z",
+            "2026-09-28T07:50:00Z"
+          ],
+          "events": 14
+        }
+      ]
+    },
+    {
+      "name": "codex: a subagent has its parent and no touches",
+      "source": "codex",
+      "lines": [
+        "{\"type\":\"session_meta\",\"payload\":{\"id\":\"child\",\"cwd\":\"/child\",\"source\":{\"subagent\":{\"thread_spawn\":{\"parent_thread_id\":\"parent\"}}}}}",
+        "{\"type\":\"event_msg\",\"timestamp\":\"2026-09-28T07:00:00Z\",\"payload\":{\"type\":\"task_started\"}}",
+        "{\"type\":\"response_item\",\"timestamp\":\"2026-09-28T07:01:01Z\",\"payload\":{\"type\":\"message\",\"role\":\"assistant\"}}"
+      ],
+      "sessions": [
+        {
+          "id": "codex:child",
+          "parent": "codex:parent",
+          "cwd": "/child",
+          "title": "",
+          "branches": [],
+          "touches": [],
+          "events": 1
+        }
+      ]
+    },
+    {
+      "name": "copilot: real prompts are touches, one starting with a path too; autopilot, skills, other agents, subagents and commands aren't",
+      "source": "copilot",
+      "lines": [
+        "{\"type\":\"session.start\",\"data\":{\"sessionId\":\"s1\",\"version\":1,\"producer\":\"copilot-agent\",\"copilotVersion\":\"1.0.98\",\"startTime\":\"2026-09-28T07:00:00.000Z\",\"context\":{\"cwd\":\"/repo\",\"gitRoot\":\"/repo\",\"branch\":\"main\",\"repository\":\"acme/repo\"}},\"id\":\"e1\",\"timestamp\":\"2026-09-28T07:00:00.000Z\",\"parentId\":null}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Fix the login redirect\\nsecret prompt body\",\"interactionId\":\"i\"},\"id\":\"e2\",\"timestamp\":\"2026-09-28T07:01:00.000Z\",\"parentId\":\"e1\"}",
+        "{\"type\":\"assistant.turn_start\",\"data\":{\"turnId\":\"0\"},\"id\":\"e3\",\"timestamp\":\"2026-09-28T07:01:01.000Z\",\"parentId\":\"e2\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"report_intent\",\"arguments\":{\"command\":\"secret command\"}},\"id\":\"e4\",\"timestamp\":\"2026-09-28T07:01:02.000Z\",\"parentId\":\"e3\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"bash\",\"arguments\":{\"command\":\"secret command\"}},\"id\":\"e5\",\"timestamp\":\"2026-09-28T07:01:03.000Z\",\"parentId\":\"e4\"}",
+        "{\"type\":\"tool.execution_complete\",\"data\":{\"toolCallId\":\"c\",\"success\":true,\"result\":{\"content\":\"secret output\"}},\"id\":\"e6\",\"timestamp\":\"2026-09-28T07:01:04.000Z\",\"parentId\":\"e5\"}",
+        "{\"type\":\"assistant.message\",\"data\":{\"messageId\":\"m\",\"content\":\"secret answer\"},\"id\":\"e7\",\"timestamp\":\"2026-09-28T07:01:05.000Z\",\"parentId\":\"e6\"}",
+        "{\"type\":\"assistant.turn_end\",\"data\":{\"turnId\":\"0\"},\"id\":\"e8\",\"timestamp\":\"2026-09-28T07:01:06.000Z\",\"parentId\":\"e7\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Continue with the plan\",\"interactionId\":\"i\",\"isAutopilotContinuation\":true},\"id\":\"e9\",\"timestamp\":\"2026-09-28T07:02:00.000Z\",\"parentId\":\"e8\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"secret skill text\",\"interactionId\":\"i\",\"source\":\"skill-pdf\"},\"id\":\"e10\",\"timestamp\":\"2026-09-28T07:03:00.000Z\",\"parentId\":\"e9\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"secret message from another agent\",\"interactionId\":\"i\",\"source\":\"agent-7\"},\"id\":\"e11\",\"timestamp\":\"2026-09-28T07:04:00.000Z\",\"parentId\":\"e10\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"/model\",\"interactionId\":\"i\"},\"id\":\"e12\",\"timestamp\":\"2026-09-28T07:05:00.000Z\",\"parentId\":\"e11\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"/Users/me/app fails to start\\nsecret detail\",\"interactionId\":\"i\"},\"id\":\"e13\",\"timestamp\":\"2026-09-28T07:05:30.000Z\",\"parentId\":\"e12\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"secret subagent prompt\"},\"id\":\"e14\",\"timestamp\":\"2026-09-28T07:06:00.000Z\",\"parentId\":\"e13\",\"agentId\":\"sub-1\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"bash\",\"arguments\":{\"command\":\"secret command\"}},\"id\":\"e15\",\"timestamp\":\"2026-09-28T07:06:01.000Z\",\"parentId\":\"e14\",\"agentId\":\"sub-1\"}",
+        "{\"type\":\"session.context_changed\",\"data\":{\"cwd\":\"/repo\",\"gitRoot\":\"/repo\",\"branch\":\"feature/login\"},\"id\":\"e16\",\"timestamp\":\"2026-09-28T07:07:00.000Z\",\"parentId\":\"e15\"}",
+        "{\"type\":\"session.info\",\"data\":{\"message\":\"not work\"},\"id\":\"e17\",\"timestamp\":\"2026-09-28T07:08:00.000Z\",\"parentId\":\"e16\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Describe today's entries\",\"interactionId\":\"i\"},\"id\":\"e18\",\"timestamp\":\"2026-09-28T07:10:00.000Z\",\"parentId\":\"e17\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"report_intent\",\"arguments\":{\"command\":\"secret command\"}},\"id\":\"e19\",\"timestamp\":\"2026-09-28T07:10:01.000Z\",\"parentId\":\"e18\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"spindle-list_entries\",\"arguments\":{\"command\":\"secret command\"},\"mcpServerName\":\"spindle\",\"mcpToolName\":\"list_entries\"},\"id\":\"e20\",\"timestamp\":\"2026-09-28T07:10:02.000Z\",\"parentId\":\"e19\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Then fix the tests\",\"interactionId\":\"i\"},\"id\":\"e21\",\"timestamp\":\"2026-09-28T07:20:00.000Z\",\"parentId\":\"e20\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"spindle-get_timer\",\"arguments\":{\"command\":\"secret command\"},\"mcpServerName\":\"spindle\",\"mcpToolName\":\"get_timer\"},\"id\":\"e22\",\"timestamp\":\"2026-09-28T07:20:01.000Z\",\"parentId\":\"e21\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"edit\",\"arguments\":{\"command\":\"secret command\"}},\"id\":\"e23\",\"timestamp\":\"2026-09-28T07:20:02.000Z\",\"parentId\":\"e22\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Ask somebody else's server\",\"interactionId\":\"i\"},\"id\":\"e24\",\"timestamp\":\"2026-09-28T07:30:00.000Z\",\"parentId\":\"e23\"}",
+        "{\"type\":\"tool.execution_start\",\"data\":{\"toolCallId\":\"c\",\"toolName\":\"spindlewood-list\",\"arguments\":{\"command\":\"secret command\"},\"mcpServerName\":\"spindlewood\",\"mcpToolName\":\"list\"},\"id\":\"e25\",\"timestamp\":\"2026-09-28T07:30:01.000Z\",\"parentId\":\"e24\"}",
+        "{\"type\":\"session.resume\",\"data\":{\"resumeTime\":\"2026-09-28T07:40:00.000Z\",\"eventCount\":30,\"context\":{\"cwd\":\"/repo\",\"branch\":\"main\"}},\"id\":\"e26\",\"timestamp\":\"2026-09-28T07:40:00.000Z\",\"parentId\":\"e25\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"One more thing\",\"interactionId\":\"i\"},\"id\":\"e27\",\"timestamp\":\"2026-09-28T07:41:00.000Z\",\"parentId\":\"e26\"}",
+        "{\"type\":\"session.shutdown\",\"data\":{\"shutdownType\":\"routine\"},\"id\":\"e28\",\"timestamp\":\"2026-09-28T07:42:00.000Z\",\"parentId\":\"e27\"}"
+      ],
+      "sessions": [
+        {
+          "id": "copilot:s1",
+          "parent": null,
+          "cwd": "/repo",
+          "title": "Fix the login redirect",
+          "branches": [
+            "feature/login",
+            "main"
+          ],
+          "touches": [
+            "2026-09-28T07:01:00Z",
+            "2026-09-28T07:05:30Z",
+            "2026-09-28T07:20:00Z",
+            "2026-09-28T07:30:00Z",
+            "2026-09-28T07:41:00Z"
+          ],
+          "events": 23
+        }
+      ]
+    },
+    {
+      "name": "copilot: events before the session starts, and malformed lines, are skipped",
+      "source": "copilot",
+      "lines": [
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"secret orphan prompt\",\"interactionId\":\"i\"},\"id\":\"e29\",\"timestamp\":\"2026-09-28T07:00:00.000Z\",\"parentId\":\"e28\"}",
+        "{not json",
+        "{\"type\":\"user.message\",\"data\":\"secret\"}",
+        "{\"type\":\"session.start\",\"data\":{\"sessionId\":\"s2\",\"version\":1,\"producer\":\"copilot-agent\",\"copilotVersion\":\"1.0.98\",\"startTime\":\"2026-09-28T07:01:00.000Z\"},\"id\":\"e30\",\"timestamp\":\"2026-09-28T07:01:00.000Z\",\"parentId\":\"e29\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":[\"not\",\"a\",\"string\"]},\"id\":\"e31\",\"timestamp\":\"2026-09-28T07:02:00.000Z\",\"parentId\":\"e30\"}",
+        "{\"type\":\"user.message\",\"data\":{\"content\":\"Write the docs\",\"interactionId\":\"i\"},\"id\":\"e32\",\"timestamp\":\"2026-09-28T07:03:00.000Z\",\"parentId\":\"e31\"}"
+      ],
+      "sessions": [
+        {
+          "id": "copilot:s2",
+          "parent": null,
+          "cwd": "",
+          "title": "Write the docs",
+          "branches": [],
+          "touches": [
+            "2026-09-28T07:03:00Z"
+          ],
+          "events": 2
+        }
+      ]
+    }
+  ],
+  "discoveryAbout": "Paths below each source's logs folder: whether each is a session log, and the session it is uploaded with.",
+  "discovery": [
+    {
+      "source": "claude",
+      "path": "p/s.jsonl",
+      "log": true,
+      "session": "p/s"
+    },
+    {
+      "source": "claude",
+      "path": "p/s/subagents/agent-1.jsonl",
+      "log": true,
+      "session": "p/s"
+    },
+    {
+      "source": "claude",
+      "path": "s.jsonl",
+      "log": true,
+      "session": "s.jsonl"
+    },
+    {
+      "source": "claude",
+      "path": "p/notes.txt",
+      "log": false,
+      "session": null
+    },
+    {
+      "source": "codex",
+      "path": "2026/09/28/rollout-2026-09-28T07-00-00-x.jsonl",
+      "log": true,
+      "session": "2026/09/28/rollout-2026-09-28T07-00-00-x.jsonl"
+    },
+    {
+      "source": "codex",
+      "path": "rollout-y.jsonl",
+      "log": true,
+      "session": "rollout-y.jsonl"
+    },
+    {
+      "source": "codex",
+      "path": "2026/09/28/history.jsonl",
+      "log": false,
+      "session": null
+    },
+    {
+      "source": "copilot",
+      "path": "s1/events.jsonl",
+      "log": true,
+      "session": "s1/events.jsonl"
+    },
+    {
+      "source": "copilot",
+      "path": "s1/files/events.jsonl",
+      "log": false,
+      "session": null
+    },
+    {
+      "source": "copilot",
+      "path": "events.jsonl",
+      "log": false,
+      "session": null
+    },
+    {
+      "source": "copilot",
+      "path": "s1/checkpoints.jsonl",
+      "log": false,
+      "session": null
+    }
+  ]
+}

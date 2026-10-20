@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Spindle</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Spindle</string>
+	<!-- Finder and the Dock show the name in en.lproj/InfoPlist.strings rather than the bundle's file name. -->
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Threennovate</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- A server on this Mac or the local network may be plain HTTP while developing; the internet needs HTTPS. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Spindle Cloud, set per build configuration: the server the app starts with, and where updates come from. People who run their own server choose it when they sign in. -->
+	<key>SpindleServerURL</key>
+	<string>$(SPINDLE_SERVER_URL)</string>
+	<!-- Where the web app for that server lives, when it is not the server itself. -->
+	<key>SpindleWebURL</key>
+	<string>$(SPINDLE_WEB_URL)</string>
+	<!-- Addresses Spindle Cloud had before: a sign-in kept for one of them moves to the current one. -->
+	<key>SpindleFormerServerURLs</key>
+	<string>$(SPINDLE_FORMER_SERVER_URLS)</string>
+	<!-- Updates: the feed a release puts on the server, and the key every update must be signed with. -->
+	<key>SUFeedURL</key>
+	<string>$(SPINDLE_SERVER_URL)/downloads/spindle-mac/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>$(SPINDLE_UPDATES_PUBLIC_KEY)</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+</dict>
+</plist>

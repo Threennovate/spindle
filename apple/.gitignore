@@ -1,0 +1,11 @@
+# Swift Package Manager and Xcode build output
+.build/
+.swiftpm/
+DerivedData/
+build/
+# Builds go here instead: Spotlight skips it, so they don't show up as more copies of the app.
+build.noindex/
+xcuserdata/
+*.xcuserstate
+# Store pictures, drawn again for each listing (docs/releasing.md#store-pictures).
+appstore/

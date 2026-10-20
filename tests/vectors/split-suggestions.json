@@ -1,0 +1,500 @@
+{
+  "about": "Split suggestions from agent activity. The Mac's Kit (SplitSuggestionVectorTests.swift) and the API (SplitSuggestionVectorTests.cs) both run these cases, so a split suggested on the web is the one the Mac suggests. Times are wall-clock times in timeZone. A session without a repository ran in a folder outside git. Projects are referred to by key; the entry's project is the time the logs leave open. Each part's prompts are those sent within the entry, and strength says how loudly the suggestion may be offered. A session's branches are those it ran on; rules are branch rules on a repository's link, in order, and a part's task is the one its rule names. branchPatterns are how a rule's pattern reads a branch.",
+  "timeZone": "Europe/Zagreb",
+  "projects": {
+    "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
+    "beacon": { "id": "0a000000-0000-4000-8000-000000000002", "name": "Beacon" },
+    "copper": { "id": "0a000000-0000-4000-8000-000000000003", "name": "Copper" },
+    "timesheet": { "id": "0a000000-0000-4000-8000-000000000004", "name": "TimeSheet" }
+  },
+  "repositories": {
+    "atlas": { "identity": "origin:github.com/acme/atlas", "name": "atlas" },
+    "beacon": { "identity": "origin:gitlab.example.com/acme/beacon", "name": "beacon" },
+    "copper": { "identity": "path:5f1c0e8d2a7b4c6e9f0a1b2c3d4e5f60", "name": "copper" },
+    "time-sheet": { "identity": "origin:github.com/acme/time-sheet", "name": "time-sheet" },
+    "zeta": { "identity": "origin:github.com/acme/zeta", "name": "zeta" }
+  },
+  "tasks": {
+    "support": { "id": "0b000000-0000-4000-8000-000000000001", "name": "Support", "project": "copper" }
+  },
+  "suggestions": [
+    {
+      "name": "back and forth between two projects gives only percentages",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20", "2026-09-14 09:40"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:10", "2026-09-14 09:30", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "beacon", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": null,
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "moving from one project to the next gives stretches",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:12", "2026-09-14 09:24", "2026-09-14 09:36"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:50", "2026-09-14 10:02", "2026-09-14 10:14", "2026-09-14 10:26", "2026-09-14 10:38", "2026-09-14 10:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 11:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 42, "attention": 3000, "unattributed": 0, "prompts": 4 },
+          { "project": "beacon", "percent": 58, "attention": 4200, "unattributed": 0, "prompts": 6 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:50" },
+          { "project": "beacon", "start": "2026-09-14 09:50", "end": "2026-09-14 11:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "attention stops 15 minutes after a prompt and the rest stays on the entry's project",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:30"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "copper" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 25, "attention": 900, "unattributed": 0, "prompts": 1 },
+          { "project": "copper", "percent": 50, "attention": 0, "unattributed": 1800, "prompts": 0 },
+          { "project": "beacon", "percent": 25, "attention": 900, "unattributed": 0, "prompts": 1 }
+        ],
+        "coverage": 0.5,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "beacon", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "the time between two prompts for the same project goes to it",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 10:00"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 10:30"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 11:00", "project": "beacon" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 63, "attention": 4500, "unattributed": 0, "prompts": 2 },
+          { "project": "beacon", "percent": 37, "attention": 900, "unattributed": 1800, "prompts": 1 }
+        ],
+        "coverage": 0.75,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 10:30" },
+          { "project": "beacon", "start": "2026-09-14 10:30", "end": "2026-09-14 11:00" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "a part under 10 percent is left out",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:55"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 10:00", "2026-09-14 10:10", "2026-09-14 10:20", "2026-09-14 10:30", "2026-09-14 10:40", "2026-09-14 10:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 11:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 48, "attention": 3300, "unattributed": 0, "prompts": 6 },
+          { "project": "copper", "percent": 52, "attention": 3600, "unattributed": 0, "prompts": 6 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 10:00" },
+          { "project": "copper", "start": "2026-09-14 10:00", "end": "2026-09-14 11:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "less than 10 minutes of evidence suggests nothing",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:30"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:34"] },
+        { "id": "s", "repository": null, "folder": "scratch", "touches": ["2026-09-14 09:38"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "copper" },
+      "expected": null
+    },
+    {
+      "name": "time that all went to one project suggests nothing",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": null
+    },
+    {
+      "name": "a repository without a project is named as itself",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "repository": "zeta", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "repository": "zeta", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a folder outside git counts for nothing and ends the time between two prompts",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 10:00"] },
+        { "id": "s", "repository": null, "folder": "scratch", "touches": ["2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 10:30"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 11:00", "project": "copper" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 25, "attention": 1800, "unattributed": 0, "prompts": 2 },
+          { "project": "copper", "percent": 63, "attention": 0, "unattributed": 4500, "prompts": 0 },
+          { "project": "beacon", "percent": 12, "attention": 900, "unattributed": 0, "prompts": 1 }
+        ],
+        "coverage": 0.375,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 10:30" },
+          { "project": "beacon", "start": "2026-09-14 10:30", "end": "2026-09-14 11:00" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "a subagent's prompts are not the person's",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] },
+        { "id": "b-agent", "parent": "b", "repository": "copper", "touches": ["2026-09-14 09:35", "2026-09-14 09:45"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "beacon", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "beacon", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "an entry over midnight sees both days",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 23:00", "2026-09-14 23:10", "2026-09-14 23:20", "2026-09-14 23:30", "2026-09-14 23:40", "2026-09-14 23:50"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-15 00:10", "2026-09-15 00:20", "2026-09-15 00:30", "2026-09-15 00:40", "2026-09-15 00:50"] }
+      ],
+      "entry": { "start": "2026-09-14 23:00", "stop": "2026-09-15 01:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 58, "attention": 3900, "unattributed": 300, "prompts": 6 },
+          { "project": "beacon", "percent": 42, "attention": 3000, "unattributed": 0, "prompts": 5 }
+        ],
+        "coverage": 0.9583333333333334,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 23:00", "end": "2026-09-15 00:10" },
+          { "project": "beacon", "start": "2026-09-15 00:10", "end": "2026-09-15 01:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "attention from a prompt before midnight carries into an entry after it",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 23:55", "2026-09-15 00:50"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-15 01:00", "2026-09-15 01:10", "2026-09-15 01:20"] }
+      ],
+      "entry": { "start": "2026-09-15 00:05", "stop": "2026-09-15 01:30", "project": "beacon" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 65, "attention": 3300, "unattributed": 0, "prompts": 1 },
+          { "project": "beacon", "percent": 35, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-15 00:05", "end": "2026-09-15 01:00" },
+          { "project": "beacon", "start": "2026-09-15 01:00", "end": "2026-09-15 01:30" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "attention carried in from before the entry counts from its start",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 08:58", "2026-09-14 09:05"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:10", "stop": "2026-09-14 10:00", "project": "beacon" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 20, "attention": 600, "unattributed": 0, "prompts": 0 },
+          { "project": "beacon", "percent": 80, "attention": 2400, "unattributed": 0, "prompts": 4 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:10", "end": "2026-09-14 09:20" },
+          { "project": "beacon", "start": "2026-09-14 09:20", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "a project named like the repository is its project",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "t", "repository": "time-sheet", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "timesheet", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "timesheet", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "the project the person chose beats a name",
+      "chosen": { "atlas": "copper" },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "beacon" },
+      "expected": {
+        "parts": [
+          { "project": "copper", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "beacon", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "copper", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "beacon", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a learned link names an unknown repository's project",
+      "learned": { "zeta": "copper" },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "copper", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "copper", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a repository the person set to no project is named as itself, over a learned link and a name",
+      "noProject": ["time-sheet"],
+      "learned": { "time-sheet": "copper" },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "t", "repository": "time-sheet", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "repository": "time-sheet", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "repository": "time-sheet", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a part with a single prompt makes the suggestion weak",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:40"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 75, "attention": 2400, "unattributed": 300, "prompts": 4 },
+          { "project": "beacon", "percent": 25, "attention": 900, "unattributed": 0, "prompts": 1 }
+        ],
+        "coverage": 0.9166666666666666,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:40" },
+          { "project": "beacon", "start": "2026-09-14 09:40", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "weak"
+      }
+    },
+    {
+      "name": "most of the time in the logs and prompts for every part make the suggestion strong",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:25", "2026-09-14 09:30"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "copper" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 42, "attention": 1500, "unattributed": 0, "prompts": 2 },
+          { "project": "copper", "percent": 58, "attention": 1200, "unattributed": 900, "prompts": 2 }
+        ],
+        "coverage": 0.75,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:25" },
+          { "project": "copper", "start": "2026-09-14 09:25", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a branch rule takes a repository's work on its branches to its project, with its task",
+      "rules": { "atlas": [{ "pattern": "acme/*", "project": "copper", "task": "support" }] },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "branches": ["main"], "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "atlas", "branches": ["acme/login"], "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "copper", "task": "support", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "copper", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a branch rule applies only when every branch of the sessions matches it",
+      "rules": { "atlas": [{ "pattern": "acme/*", "project": "copper", "task": "support" }] },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "branches": ["main"], "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "atlas", "branches": ["acme/login", "main"], "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": null
+    },
+    {
+      "name": "the first branch rule that matches wins over the chosen link, ignoring case",
+      "chosen": { "beacon": "timesheet" },
+      "rules": { "beacon": [{ "pattern": "ACME-*", "project": "copper" }, { "pattern": "*", "project": "atlas" }] },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "branches": ["main"], "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "branches": ["acme-12-fix"], "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "copper", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "copper", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "a session without a branch goes by the repository's link",
+      "rules": { "beacon": [{ "pattern": "*", "project": "copper" }] },
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 },
+          { "project": "beacon", "percent": 50, "attention": 1800, "unattributed": 0, "prompts": 3 }
+        ],
+        "coverage": 1,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:30" },
+          { "project": "beacon", "start": "2026-09-14 09:30", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    }
+  ],
+  "learning": [
+    {
+      "name": "a repository that had the attention of an entry on one project is linked to it",
+      "sessions": [
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entries": [
+        { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "copper" }
+      ],
+      "expected": { "zeta": "copper" }
+    },
+    {
+      "name": "entries with spread attention, too little of it, or a split teach nothing",
+      "sessions": [
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 14:00"] },
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50", "2026-09-14 16:00", "2026-09-14 16:10", "2026-09-14 16:20", "2026-09-14 16:30"] }
+      ],
+      "entries": [
+        { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "copper" },
+        { "start": "2026-09-14 14:00", "stop": "2026-09-14 14:30", "project": "beacon" },
+        { "start": "2026-09-14 16:00", "stop": "2026-09-14 17:00", "project": "copper", "split": true }
+      ],
+      "expected": {}
+    }
+  ],
+  "branchPatterns": [
+    { "pattern": "acme/*", "branch": "acme/login", "matches": true },
+    { "pattern": "acme/*", "branch": "acme/login/oauth", "matches": true },
+    { "pattern": "acme/*", "branch": "feature/acme/login", "matches": false },
+    { "pattern": "ACME-*", "branch": "acme-12-fix", "matches": true },
+    { "pattern": "ACME-*", "branch": "ACME-", "matches": true },
+    { "pattern": "*-hotfix", "branch": "release-2-hotfix", "matches": true },
+    { "pattern": "main", "branch": "main", "matches": true },
+    { "pattern": "main", "branch": "maintenance", "matches": false },
+    { "pattern": "a*b*c", "branch": "axxbyyc", "matches": true },
+    { "pattern": "a*b*c", "branch": "axxbyy", "matches": false },
+    { "pattern": "*", "branch": "anything/at-all", "matches": true },
+    { "pattern": " acme/* ", "branch": "acme/x", "matches": true },
+    { "pattern": "", "branch": "main", "matches": false }
+  ]
+}

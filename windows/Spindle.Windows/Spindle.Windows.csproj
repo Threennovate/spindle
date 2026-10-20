@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/spindle.ico</ApplicationIcon>
+    <AssemblyName>Spindle</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Velopack" />
+    <ProjectReference Include="../Spindle.Core/Spindle.Core.csproj" />
+    <ProjectReference Include="../Spindle.Platform/Spindle.Platform.csproj" />
+    <ProjectReference Include="../Spindle.Activity/Spindle.Activity.csproj" />
+    <AvaloniaResource Include="Assets/**" />
+    <InternalsVisibleTo Include="Spindle.Windows.Tests" />
+  </ItemGroup>
+</Project>

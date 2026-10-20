@@ -1,0 +1,40 @@
+name: Android checks
+on:
+  pull_request:
+    paths: ['android/**', 'openapi/spindle.json', '.github/workflows/android-checks.yml']
+  push:
+    branches: [main]
+    paths: ['android/**', 'openapi/spindle.json', '.github/workflows/android-checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check generated API models
+        run: |
+          python3 android/scripts/generate-models.py
+          git diff --exit-code -- android/app/src/main/java/com/spindletrack/android/data/Models.kt
+      - name: Build, test and lint
+        working-directory: android
+        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-checks
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/reports/tests/
+            android/app/build/reports/lint-results-debug.html

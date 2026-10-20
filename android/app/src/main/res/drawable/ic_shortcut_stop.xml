@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A shortcut's icon: red disc with a stop mark in white. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#E5342B" android:pathData="M24,24m-22,0a22,22 0 1,1 44,0a22,22 0 1,1 -44,0"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M17,19a2,2 0 0,1 2,-2h10a2,2 0 0,1 2,2v10a2,2 0 0,1 -2,2h-10a2,2 0 0,1 -2,-2z"/>
+</vector>

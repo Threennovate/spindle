@@ -1,0 +1,89 @@
+# Spindle on your own server: the app (API and web in one image) and PostgreSQL. See docs/self-hosting.md.
+#
+#   cp .env.example .env     then fill it in
+#   docker compose up -d
+#
+# This is for running Spindle. For working on Spindle, see CONTRIBUTING.md and infra/docker-compose.yml.
+name: spindle-server
+
+services:
+  app:
+    # A released image. To build from this checkout instead: docker compose up -d --build
+    image: ${SPINDLE_IMAGE:-ghcr.io/threennovate/spindle:latest}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Every setting in .env reaches the app; the ones below are fixed or checked here.
+    env_file: .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=spindle;Username=spindle;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      Database__MigrateOnStartup: "true"
+      Auth__SigningKey: ${Auth__SigningKey:?Set Auth__SigningKey in .env}
+      App__BaseUrl: ${App__BaseUrl:?Set App__BaseUrl in .env}
+      # localhost is for the health check below, which calls the app from inside its container.
+      AllowedHosts: ${AllowedHosts:?Set AllowedHosts in .env};localhost
+      App__DownloadsPath: /app/downloads
+      # The app doesn't start without an SMTP server. Without one in .env, it tries one that isn't there: nobody gets
+      # email, and everything else works.
+      Smtp__Host: ${Smtp__Host:-localhost}
+      Smtp__Port: ${Smtp__Port:-587}
+      Smtp__Security: ${Smtp__Security:-StartTls}
+      Smtp__FromAddress: ${Smtp__FromAddress:-spindle@localhost}
+      # Trials and plans are for Spindle Cloud. On your own server nobody is ever limited.
+      Subscriptions__Enabled: "false"
+      # A reverse proxy on this host or in this network may tell the app the client's address and scheme.
+      ReverseProxy__KnownNetworks__0: ${SPINDLE_SUBNET:-10.213.0.0/24}
+    ports:
+      # Only this machine by default, for a reverse proxy in front. 8080:8080 opens it to the network.
+      - ${SPINDLE_PORT:-127.0.0.1:8080}:8080
+    volumes:
+      - downloads:/app/downloads
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--output", "/dev/null", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Time for the migrations at startup.
+      start_period: 60s
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spindle
+      POSTGRES_USER: spindle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    # Not published: only the app reaches it.
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spindle -d spindle"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Catches every email instead of sending it, to try Spindle before setting up real email. Start it with
+  # docker compose --profile mailpit up -d, set the Smtp__ lines in .env as it says, and read the mail at
+  # http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: [mailpit]
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8025:8025
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${SPINDLE_SUBNET:-10.213.0.0/24}
+
+volumes:
+  postgres-data:
+  downloads:

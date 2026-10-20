@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app's icon to start or stop a timer, as Siri and Shortcuts do on the iPhone. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="start" android:enabled="true" android:icon="@drawable/ic_shortcut_start"
+        android:shortcutShortLabel="@string/shortcut_start" android:shortcutLongLabel="@string/shortcut_start_long">
+        <intent android:action="com.spindletrack.android.START_TIMER" android:targetPackage="com.spindletrack.android" android:targetClass="com.spindletrack.android.ShortcutActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="stop" android:enabled="true" android:icon="@drawable/ic_shortcut_stop"
+        android:shortcutShortLabel="@string/shortcut_stop" android:shortcutLongLabel="@string/shortcut_stop_long">
+        <intent android:action="com.spindletrack.android.STOP_TIMER" android:targetPackage="com.spindletrack.android" android:targetClass="com.spindletrack.android.ShortcutActivity" />
+    </shortcut>
+</shortcuts>

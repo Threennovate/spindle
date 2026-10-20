@@ -1,0 +1,155 @@
+{
+  "about": "Agent attention nobody tracked (UntrackedActivity): the stretches the calendar and the day's review show, where a timer could have started (earlierStart, \"Start at 9:12?\"), and the work going on with no timer that the reminder to track names (ongoing). The Mac's Kit (UntrackedActivityVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases; the server's UntrackedActivity.cs has the same stretch rules. Times are wall-clock times in timeZone. covered is the time entries (and proposals waiting) take. Projects and repositories are as in split-suggestions.json, linked as chosen says; zeta has no project. unlinked is minutes of attention in repositories without a project. expected is null when there is nothing to offer.",
+  "timeZone": "Europe/Zagreb",
+  "projects": {
+    "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
+    "beacon": { "id": "0a000000-0000-4000-8000-000000000002", "name": "Beacon" },
+    "copper": { "id": "0a000000-0000-4000-8000-000000000003", "name": "Copper" }
+  },
+  "repositories": {
+    "atlas": { "identity": "origin:github.com/acme/atlas", "name": "atlas" },
+    "beacon": { "identity": "origin:gitlab.example.com/acme/beacon", "name": "beacon" },
+    "copper": { "identity": "path:5f1c0e8d2a7b4c6e9f0a1b2c3d4e5f60", "name": "copper" },
+    "zeta": { "identity": "origin:github.com/acme/zeta", "name": "zeta" }
+  },
+  "chosen": { "atlas": "atlas", "beacon": "beacon", "copper": "copper" },
+  "stretches": [
+    {
+      "name": "what entries cover is left out, stretches far apart stay apart, and short ones are dropped",
+      "day": "2026-09-14",
+      "now": "2026-09-14 23:00",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:15", "2026-09-14 09:30", "2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 13:00", "2026-09-14 13:15"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 15:00"] }
+      ],
+      "covered": [["2026-09-14 09:20", "2026-09-14 09:50"], ["2026-09-14 15:04", "2026-09-14 16:00"]],
+      "expected": [
+        { "start": "2026-09-14 09:00", "end": "2026-09-14 09:20", "projects": ["atlas"], "unlinked": 0 },
+        { "start": "2026-09-14 09:50", "end": "2026-09-14 10:00", "projects": ["atlas"], "unlinked": 0 },
+        { "start": "2026-09-14 13:00", "end": "2026-09-14 13:30", "projects": ["beacon"], "unlinked": 0 }
+      ]
+    },
+    {
+      "name": "work within twenty minutes is one stretch, its projects most attention first, with unlinked time apart",
+      "day": "2026-09-14",
+      "now": "2026-09-14 23:00",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:20"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:10"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:50"] }
+      ],
+      "covered": [],
+      "expected": [{ "start": "2026-09-14 09:00", "end": "2026-09-14 10:05", "projects": ["atlas", "beacon"], "unlinked": 10 }]
+    },
+    {
+      "name": "a stretch going on stops at now",
+      "day": "2026-09-14",
+      "now": "2026-09-14 10:40",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 10:00", "2026-09-14 10:15", "2026-09-14 10:30"] }],
+      "covered": [],
+      "expected": [{ "start": "2026-09-14 10:00", "end": "2026-09-14 10:40", "projects": ["atlas"], "unlinked": 0 }]
+    },
+    {
+      "name": "nothing when an entry covers all of it",
+      "day": "2026-09-14",
+      "now": "2026-09-14 23:00",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:15", "2026-09-14 09:30"] }],
+      "covered": [["2026-09-14 08:00", "2026-09-14 12:00"]],
+      "expected": []
+    },
+    {
+      "name": "a repository without a project still shows, with no project to fill in",
+      "day": "2026-09-14",
+      "now": "2026-09-14 23:00",
+      "sessions": [{ "id": "z", "repository": "zeta", "touches": ["2026-09-14 14:00", "2026-09-14 14:10"] }],
+      "covered": [],
+      "expected": [{ "start": "2026-09-14 14:00", "end": "2026-09-14 14:25", "projects": [], "unlinked": 25 }]
+    }
+  ],
+  "earlierStart": [
+    {
+      "name": "a timer can start where the agents did",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12", "2026-09-14 09:25"] }],
+      "covered": [],
+      "start": "2026-09-14 09:43",
+      "notBefore": "2026-09-14 00:00",
+      "expected": { "start": "2026-09-14 09:12", "end": "2026-09-14 09:40", "projects": ["atlas"], "unlinked": 0 }
+    },
+    {
+      "name": "never before the previous entry's stop",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12", "2026-09-14 09:25"] }],
+      "covered": [["2026-09-14 08:00", "2026-09-14 09:30"]],
+      "start": "2026-09-14 09:43",
+      "notBefore": "2026-09-14 09:30",
+      "expected": { "start": "2026-09-14 09:30", "end": "2026-09-14 09:40", "projects": ["atlas"], "unlinked": 0 }
+    },
+    {
+      "name": "a timer started long after the agents stopped keeps its start",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12", "2026-09-14 09:25"] }],
+      "covered": [],
+      "start": "2026-09-14 09:50",
+      "notBefore": "2026-09-14 00:00",
+      "expected": null
+    },
+    {
+      "name": "the agents' project can differ from the timer's; the stretch says which it was",
+      "sessions": [{ "id": "b", "repository": "beacon", "touches": ["2026-09-14 14:00", "2026-09-14 14:12"] }],
+      "covered": [],
+      "start": "2026-09-14 14:29",
+      "notBefore": "2026-09-14 00:00",
+      "expected": { "start": "2026-09-14 14:00", "end": "2026-09-14 14:27", "projects": ["beacon"], "unlinked": 0 }
+    }
+  ],
+  "ongoing": [
+    {
+      "name": "a linked project under fifteen minutes is not named yet",
+      "sessions": [
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00"] },
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12"] }
+      ],
+      "covered": [],
+      "notBefore": "2026-09-14 00:00",
+      "now": "2026-09-14 09:24",
+      "expected": null
+    },
+    {
+      "name": "after fifteen minutes in one linked project the work is named from where the stretch began",
+      "sessions": [
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00"] },
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12", "2026-09-14 09:24"] }
+      ],
+      "covered": [],
+      "notBefore": "2026-09-14 00:00",
+      "now": "2026-09-14 09:30",
+      "expected": { "start": "2026-09-14 09:00", "end": "2026-09-14 09:30", "projects": ["atlas"], "unlinked": 12 }
+    },
+    {
+      "name": "over once the agents stopped a while ago",
+      "sessions": [
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00"] },
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:12", "2026-09-14 09:24"] }
+      ],
+      "covered": [],
+      "notBefore": "2026-09-14 00:00",
+      "now": "2026-09-14 09:45",
+      "expected": null
+    },
+    {
+      "name": "repositories without a project never count",
+      "sessions": [{ "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:00", "2026-09-14 09:15", "2026-09-14 09:30", "2026-09-14 09:45"] }],
+      "covered": [],
+      "notBefore": "2026-09-14 00:00",
+      "now": "2026-09-14 10:00",
+      "expected": null
+    },
+    {
+      "name": "it starts after the last entry stopped",
+      "sessions": [{ "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:15", "2026-09-14 09:30"] }],
+      "covered": [["2026-09-14 08:00", "2026-09-14 09:05"]],
+      "notBefore": "2026-09-14 09:05",
+      "now": "2026-09-14 09:40",
+      "expected": { "start": "2026-09-14 09:05", "end": "2026-09-14 09:40", "projects": ["atlas"], "unlinked": 0 }
+    }
+  ]
+}

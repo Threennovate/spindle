@@ -1,0 +1,497 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Every visual decision of the views lives here, as classes over the tokens in Tokens.axaml. -->
+
+  <!-- Windows and text -->
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{DynamicResource SpindleFontFamily}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
+  </Style>
+  <Style Selector="TextBlock">
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+  </Style>
+  <Style Selector="TextBlock.strong">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.medium">
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.bodyLarge">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBodyLarge}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.subtitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSubtitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFamily" Value="{DynamicResource SpindleDisplayFontFamily}" />
+  </Style>
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFamily" Value="{DynamicResource SpindleDisplayFontFamily}" />
+  </Style>
+  <Style Selector="TextBlock.sectionHeader">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.tertiary">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.brand">
+    <Setter Property="Foreground" Value="{DynamicResource BrandTextBrush}" />
+  </Style>
+  <Style Selector="TextBlock.critical">
+    <Setter Property="Foreground" Value="{DynamicResource CriticalBrush}" />
+  </Style>
+  <Style Selector="TextBlock.caution">
+    <Setter Property="Foreground" Value="{DynamicResource CautionBrush}" />
+  </Style>
+  <Style Selector="TextBlock.onBrand">
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+  </Style>
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector="TextBlock.clock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeClock}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector="TextBlock.wrap">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="TextTrimming" Value="None" />
+  </Style>
+  <Style Selector="SelectableTextBlock.mono">
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+
+  <!-- Icons -->
+  <Style Selector="PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <Style Selector="PathIcon.small">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+  </Style>
+  <Style Selector="PathIcon.large">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+  </Style>
+  <Style Selector="PathIcon.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="PathIcon.brand">
+    <Setter Property="Foreground" Value="{DynamicResource BrandTextBrush}" />
+  </Style>
+  <Style Selector="PathIcon.critical">
+    <Setter Property="Foreground" Value="{DynamicResource CriticalBrush}" />
+  </Style>
+  <Style Selector="PathIcon.success">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+  <Style Selector="PathIcon.caution">
+    <Setter Property="Foreground" Value="{DynamicResource CautionBrush}" />
+  </Style>
+
+  <!-- Buttons: the standard Windows 11 button comes from the Fluent resources in Tokens.axaml. -->
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="11,5,11,6" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- The main action: marigold with ink on it, in both themes. -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandPressedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+  </Style>
+  <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+
+  <!-- Quiet buttons that only show a fill under the pointer: toolbar icons, field buttons, list actions. -->
+  <Style Selector="Button.subtle, Button.field, Button.icon, Button.nav, Button.row, Button.link, Button.danger">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.subtle:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.field:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.row:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.subtle:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.field:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.nav:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.row:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillPressedBrush}" />
+  </Style>
+  <Style Selector="Button.subtle:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.field:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.row:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.link:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <!-- The calendar's agent activity: an icon, tinted while on. -->
+  <Style Selector="ToggleButton.activity">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+  </Style>
+  <Style Selector="ToggleButton.activity:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.activity:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.activity:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandTintBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.field">
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.icon">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.icon.small">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+  </Style>
+  <Style Selector="Button.row">
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+  </Style>
+  <Style Selector="Button.row.highlighted /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.link">
+    <Setter Property="Foreground" Value="{DynamicResource BrandTextBrush}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource BrandTextBrush}" />
+    <Setter Property="Opacity" Value="0.8" />
+  </Style>
+  <Style Selector="Button.link:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource BrandTextBrush}" />
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <Style Selector="Button.danger">
+    <Setter Property="Foreground" Value="{DynamicResource CriticalBrush}" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource CriticalBrush}" />
+  </Style>
+  <Style Selector="Button.dangerFilled">
+    <Setter Property="Background" Value="{DynamicResource StopFillBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnCriticalBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.dangerFilled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StopFillHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnCriticalBrush}" />
+  </Style>
+
+  <!-- The round start and stop buttons of the timer. -->
+  <Style Selector="Button.start, Button.stop">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.start.small, Button.stop.small">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="Height" Value="26" />
+    <Setter Property="CornerRadius" Value="13" />
+  </Style>
+  <Style Selector="Button.start">
+    <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+  </Style>
+  <Style Selector="Button.start:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnBrandBrush}" />
+  </Style>
+  <Style Selector="Button.start:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandPressedBrush}" />
+  </Style>
+  <Style Selector="Button.stop">
+    <Setter Property="Background" Value="{DynamicResource StopFillBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnCriticalBrush}" />
+  </Style>
+  <Style Selector="Button.stop:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource StopFillHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnCriticalBrush}" />
+  </Style>
+
+  <!-- Navigation pane items -->
+  <Style Selector="Button.nav">
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.nav.selected">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillSelectedBrush}" />
+  </Style>
+  <Style Selector="Button.nav.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+  </Style>
+  <Style Selector="Border.navIndicator">
+    <Setter Property="Width" Value="3" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="Button.nav.selected Border.navIndicator">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+
+  <!-- Surfaces -->
+  <Style Selector="Border.layer">
+    <Setter Property="Background" Value="{DynamicResource LayerBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LayerStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1,1,0,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLayer}" />
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}" />
+    <Setter Property="Padding" Value="{DynamicResource CardPadding}" />
+  </Style>
+  <Style Selector="Border.card.flush">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Border.flyout">
+    <Setter Property="Background" Value="{DynamicResource FlyoutBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FlyoutStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+    <Setter Property="BoxShadow" Value="0 8 16 0 #24000000" />
+  </Style>
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+  </Style>
+  <Style Selector="Border.verticalDivider">
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource DividerBrush}" />
+  </Style>
+  <Style Selector="Border.chip">
+    <Setter Property="Background" Value="{DynamicResource ChipBackgroundBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="Padding" Value="7,1,7,2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.badge">
+    <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="Padding" Value="5,0,5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.keycap">
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="Background" Value="{DynamicResource ControlFillBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="5,0,5,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.timerBar">
+    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusCard}" />
+    <Setter Property="Padding" Value="14,8,10,8" />
+    <Setter Property="BoxShadow" Value="0 1 3 0 #0D000000" />
+  </Style>
+
+  <!-- InfoBar: transient notices and lasting messages such as the read-only banner. -->
+  <Style Selector="Border.infobar">
+    <Setter Property="Background" Value="{DynamicResource InfoBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Border.infobar.critical">
+    <Setter Property="Background" Value="{DynamicResource CriticalBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.infobar.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.infobar.caution">
+    <Setter Property="Background" Value="{DynamicResource CautionBackgroundBrush}" />
+  </Style>
+  <Style Selector="Border.toast">
+    <Setter Property="Background" Value="{DynamicResource FlyoutBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FlyoutStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="BoxShadow" Value="0 8 16 0 #24000000" />
+  </Style>
+  <Style Selector="Border.banner">
+    <Setter Property="Background" Value="{DynamicResource CriticalBackgroundBrush}" />
+    <Setter Property="Padding" Value="32,10" />
+  </Style>
+  <!-- What agents proposed, waiting above every section. -->
+  <Style Selector="Border.banner.brand">
+    <Setter Property="Background" Value="{DynamicResource BrandTintBrush}" />
+    <Setter Property="Padding" Value="32,8" />
+  </Style>
+
+  <!-- Lists of entries and other rows: a hover fill, and actions that appear under the pointer. -->
+  <Style Selector="Border.listRow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="16,9,10,9" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Border.listRow:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+  </Style>
+  <Style Selector="Border.listRow Button.reveal">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Border.listRow:pointerover Button.reveal, Border.listRow Button.reveal:focus-within">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Border.suggestionChip">
+    <Setter Property="Background" Value="{DynamicResource ChipBackgroundBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+  </Style>
+  <Style Selector="Button.chip">
+    <Setter Property="Background" Value="{DynamicResource ChipBackgroundBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="Padding" Value="8,2,10,3" />
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BrandTintBrush}" />
+  </Style>
+  <Style Selector="Button.chip.proposal">
+    <Setter Property="Background" Value="{DynamicResource BrandTintBrush}" />
+  </Style>
+  <!-- "✦ 3 to review": a day's review, beside the day. -->
+  <Style Selector="Button.chip.review">
+    <Setter Property="Background" Value="{DynamicResource BrandTintBrush}" />
+  </Style>
+
+  <!-- Segmented choices -->
+  <Style Selector="Border.segmented">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.segment">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.segment:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.segment.selected">
+    <Setter Property="Background" Value="{DynamicResource SolidCardBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="9,2" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.segment.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SolidCardBackgroundBrush}" />
+  </Style>
+
+  <!-- Inputs -->
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TextBox.bare:pointerover /template/ Border#PART_BorderElement, TextBox.bare:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.large">
+    <Setter Property="FontSize" Value="16" />
+  </Style>
+  <Style Selector="TextBox.mono">
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector="TextBox.invalid">
+    <Setter Property="Foreground" Value="{DynamicResource CriticalBrush}" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusControl}" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+  <Style Selector="ToolTip">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+  </Style>
+  <Style Selector="FlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+  </Style>
+  <Style Selector="FlyoutPresenter.picker">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MaxWidth" Value="420" />
+    <Setter Property="MaxHeight" Value="520" />
+  </Style>
+  <Style Selector="MenuFlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+  </Style>
+</Styles>

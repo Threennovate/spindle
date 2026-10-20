@@ -1,0 +1,162 @@
+name: Mac release
+# Only in the public repository, so forks never build or publish a release.
+on:
+  push:
+    tags: ['mac-*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag, e.g. mac-1.1.0'
+        required: true
+        type: string
+env:
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+permissions:
+  contents: read
+concurrency:
+  group: mac-release-and-publish
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.repository == 'Threennovate/spindle'
+    runs-on: macos-26
+    environment: mac-release
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.RELEASE_TAG }}
+      - name: Validate release tag
+        run: |
+          [[ "$RELEASE_TAG" =~ ^mac-[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          git merge-base --is-ancestor HEAD origin/main
+          version=$(sed -n 's/^    MARKETING_VERSION: "\([^"]*\)"/\1/p' apple/project.yml)
+          test "$RELEASE_TAG" = "mac-$version"
+          test -s "apple/ReleaseNotes/$version.md"
+      - name: Test shared library
+        run: swift test --package-path apple/SpindleKit
+      - name: Test release publishing
+        run: python3 -m unittest discover -s apple/scripts -p 'test_*.py'
+      - name: Test Mac app
+        run: >-
+          xcodebuild test -quiet -project apple/Spindle.xcodeproj
+          -scheme SpindleMac -destination 'platform=macOS'
+          -onlyUsePackageVersionsFromResolvedFile
+          CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGN_ENTITLEMENTS= ENABLE_HARDENED_RUNTIME=NO
+      - name: Prepare temporary signing credentials
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.MAC_PROVISIONING_PROFILE_BASE64 }}
+          NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          for name in CERTIFICATE_BASE64 CERTIFICATE_PASSWORD PROVISIONING_PROFILE_BASE64 NOTARY_KEY_BASE64 NOTARY_KEY_ID NOTARY_ISSUER_ID SPARKLE_PRIVATE_KEY; do
+            test -n "${!name}" || { echo "Missing credential: $name"; exit 1; }
+          done
+          printf '%s' "$CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/mac.provisionprofile"
+          printf '%s' "$NOTARY_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle.key"
+          keychain_password=$(openssl rand -hex 32)
+          security create-keychain -p "$keychain_password" "$RUNNER_TEMP/release.keychain-db"
+          security set-keychain-settings -lut 7200 "$RUNNER_TEMP/release.keychain-db"
+          security unlock-keychain -p "$keychain_password" "$RUNNER_TEMP/release.keychain-db"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$RUNNER_TEMP/release.keychain-db" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$RUNNER_TEMP/release.keychain-db" >/dev/null
+          security list-keychains -d user -s "$RUNNER_TEMP/release.keychain-db" "$HOME/Library/Keychains/login.keychain-db"
+          xcrun notarytool store-credentials SpindleCI --key "$RUNNER_TEMP/notary.p8" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID" --keychain "$RUNNER_TEMP/release.keychain-db"
+          security default-keychain -d user -s "$RUNNER_TEMP/release.keychain-db"
+      - name: Read Spindle Cloud's address
+        run: |
+          set -euo pipefail
+          site=$(sed -n 's/^ *SPINDLE_SERVER_URL: \(https:[^ ]*\)$/\1/p' apple/project.yml | head -1)
+          former=$(sed -n 's/^ *SPINDLE_FORMER_SERVER_URLS: "\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' apple/project.yml | head -1)
+          [[ "$site" =~ ^https://[a-z0-9.-]+$ ]]
+          echo "SITE=$site" >> "$GITHUB_ENV"
+          echo "FORMER_SITES=$former" >> "$GITHUB_ENV"
+      - name: Restore published update history
+        # FORMER_SITES is a space-separated list, split on purpose.
+        run: python3 apple/scripts/fetch-mac-history.py "$SITE" apple/build.noindex/downloads/spindle-mac $FORMER_SITES
+      - name: Build signed and notarized release
+        env:
+          SPINDLE_NOTARY_PROFILE: SpindleCI
+          SPINDLE_MAC_PROVISIONING_PROFILE: ${{ runner.temp }}/mac.provisionprofile
+          SPINDLE_UPDATES_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle.key
+          SPINDLE_UPDATES_PUBLIC_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
+        run: bash apple/scripts/release-mac.sh
+      - name: Package only public release files
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/mac-release
+          python3 apple/scripts/mac-release-bundle.py create apple/build.noindex/downloads artifacts/mac-release "$RELEASE_TAG" "$(git rev-parse HEAD)" "$SITE/downloads/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-release
+          path: artifacts/mac-release/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          security default-keychain -d user -s "$HOME/Library/Keychains/login.keychain-db" || true
+          security delete-keychain "$RUNNER_TEMP/release.keychain-db" || true
+          rm -f "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/notary.p8" "$RUNNER_TEMP/sparkle.key"
+          if [[ -f "$RUNNER_TEMP/mac-profile-id" ]]; then
+            profile_id=$(cat "$RUNNER_TEMP/mac-profile-id")
+            rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$profile_id.provisionprofile"
+          fi
+          rm -f "$RUNNER_TEMP/mac.provisionprofile" "$RUNNER_TEMP/mac-profile-id"
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: mac-publish
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-release
+          path: artifacts/mac-release
+      - name: Verify the prepared bundle
+        run: python3 apple/scripts/mac-release-bundle.py verify artifacts/mac-release
+      - name: Upload and publish without rebuilding
+        env:
+          SSH_KEY: ${{ secrets.MAC_UPLOAD_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.MAC_UPLOAD_KNOWN_HOSTS }}
+          UPLOAD_HOST: ${{ secrets.MAC_UPLOAD_HOST }}
+          UPLOAD_USER: ${{ secrets.MAC_UPLOAD_USER }}
+          DOWNLOADS_PATH: ${{ secrets.MAC_DOWNLOADS_PATH }}
+        run: |
+          set -euo pipefail
+          [[ "$UPLOAD_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]
+          [[ "$UPLOAD_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DOWNLOADS_PATH" =~ ^/[A-Za-z0-9_/-]+$ ]]
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS"
+          umask 077
+          mkdir -p "$RUNNER_TEMP/mac-ssh"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/mac-ssh/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/mac-ssh/known_hosts"
+          trap 'rm -rf "$RUNNER_TEMP/mac-ssh"' EXIT
+          export RSYNC_RSH="ssh -i $RUNNER_TEMP/mac-ssh/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/mac-ssh/known_hosts"
+          stage="$DOWNLOADS_PATH/.incoming-$GITHUB_RUN_ID"
+          $RSYNC_RSH "$UPLOAD_USER@$UPLOAD_HOST" "mkdir -p '$stage'"
+          rsync -r artifacts/mac-release/ "$UPLOAD_USER@$UPLOAD_HOST:$stage/"
+          rsync apple/scripts/mac-release-bundle.py "$UPLOAD_USER@$UPLOAD_HOST:$stage/publish.py"
+          $RSYNC_RSH "$UPLOAD_USER@$UPLOAD_HOST" "python3 '$stage/publish.py' publish '$stage' '$DOWNLOADS_PATH'"
+      - name: Verify published feed and first-install download
+        run: |
+          set -euo pipefail
+          site=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("prefix", "https://app.spindletrack.com/downloads/"))' artifacts/mac-release/manifest.json)
+          curl --fail --silent --show-error --retry 3 "${site}spindle-mac/appcast.xml" -o "$RUNNER_TEMP/appcast.xml"
+          cmp "$RUNNER_TEMP/appcast.xml" artifacts/mac-release/downloads/spindle-mac/appcast.xml
+          curl --fail --silent --show-error --retry 3 "${site}Spindle.dmg" -o "$RUNNER_TEMP/Spindle.dmg"
+          cmp "$RUNNER_TEMP/Spindle.dmg" artifacts/mac-release/downloads/Spindle.dmg

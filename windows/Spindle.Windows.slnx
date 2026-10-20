@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Spindle.Activity/Spindle.Activity.csproj" />
+  <Project Path="Spindle.Core/Spindle.Core.csproj" />
+  <Project Path="Spindle.Platform/Spindle.Platform.csproj" />
+  <Project Path="Spindle.Windows.Tests/Spindle.Windows.Tests.csproj" />
+  <Project Path="Spindle.Windows/Spindle.Windows.csproj" />
+</Solution>

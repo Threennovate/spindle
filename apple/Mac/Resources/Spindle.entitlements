@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.associated-domains</key>
+    <array><string>webcredentials:app.spindletrack.com</string></array>
+	<!-- Distributed directly, outside the App Store: signed with Developer ID, hardened runtime, no sandbox. -->
+</dict>
+</plist>

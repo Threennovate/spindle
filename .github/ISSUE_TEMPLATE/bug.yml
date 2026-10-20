@@ -1,0 +1,41 @@
+name: Bug
+description: Something in Spindle doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. Start the timer on a project
+        2. …
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      multiple: true
+      options: [Web, Mac, Windows, iPhone, Android, Server or self-hosting, Agents (MCP)]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The app's version (shown in its About) and, on your own server, the image tag.
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      options: [Spindle Cloud, My own server]
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, logs or error messages. Leave out anything private, such as prompts, tokens or other people's data.

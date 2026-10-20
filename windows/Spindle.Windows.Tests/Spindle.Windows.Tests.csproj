@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" />
+    <PackageReference Include="xunit.v3" />
+    <ProjectReference Include="../Spindle.Windows/Spindle.Windows.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Spindle" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/spindle_page</item>
+        <item name="android:colorAccent">#F7BE2B</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

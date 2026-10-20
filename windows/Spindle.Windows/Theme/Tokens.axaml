@@ -1,0 +1,212 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Spindle's design tokens for Windows: Fluent 2 surfaces, strokes and text levels (the values Windows 11 uses), with
+    Spindle's marigold for the main action and bronze for text in the brand colour, as on the Mac and the web.
+    Views refer to these keys only, through style classes or DynamicResource, so they follow the system theme.
+  -->
+
+  <!-- Type: Segoe UI Variable on Windows 11, Segoe UI before it, Inter where neither exists (the Mac preview). -->
+  <FontFamily x:Key="SpindleFontFamily">Segoe UI Variable Text, Segoe UI, fonts:Inter#Inter</FontFamily>
+  <FontFamily x:Key="SpindleDisplayFontFamily">Segoe UI Variable Display, Segoe UI, fonts:Inter#Inter</FontFamily>
+  <FontFamily x:Key="ContentControlThemeFontFamily">Segoe UI Variable Text, Segoe UI, fonts:Inter#Inter</FontFamily>
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizeBodyLarge">18</x:Double>
+  <x:Double x:Key="FontSizeSubtitle">20</x:Double>
+  <x:Double x:Key="FontSizeTitle">28</x:Double>
+  <x:Double x:Key="FontSizeClock">20</x:Double>
+  <x:Double x:Key="ControlContentThemeFontSize">14</x:Double>
+
+  <!-- Spacing, on a 4 px grid. -->
+  <x:Double x:Key="Space1">4</x:Double>
+  <x:Double x:Key="Space2">8</x:Double>
+  <x:Double x:Key="Space3">12</x:Double>
+  <x:Double x:Key="Space4">16</x:Double>
+  <x:Double x:Key="Space5">20</x:Double>
+  <x:Double x:Key="Space6">24</x:Double>
+  <x:Double x:Key="Space8">32</x:Double>
+  <Thickness x:Key="PagePadding">32,20,32,24</Thickness>
+  <Thickness x:Key="CardPadding">16</Thickness>
+  <Thickness x:Key="DialogPadding">24</Thickness>
+
+  <!-- Radii, as in Windows 11: 4 for controls, 8 for cards, flyouts and dialogs. -->
+  <CornerRadius x:Key="ControlCornerRadius">4</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">4</CornerRadius>
+  <CornerRadius x:Key="RadiusCard">8</CornerRadius>
+  <CornerRadius x:Key="RadiusLayer">8,0,0,0</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+  <!-- Colours that are the same in both themes. -->
+  <Color x:Key="InkColor">#141518</Color>
+  <SolidColorBrush x:Key="OnBrandBrush" Color="#141518" />
+  <SolidColorBrush x:Key="OnCriticalBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ScrimBrush" Color="#4D000000" />
+  <Color x:Key="ShadowColor">#24000000</Color>
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <!-- Surfaces -->
+      <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F3F3" />
+      <SolidColorBrush x:Key="LayerBackgroundBrush" Color="#80FFFFFF" />
+      <SolidColorBrush x:Key="LayerStrokeBrush" Color="#0F000000" />
+      <SolidColorBrush x:Key="CardBackgroundBrush" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="CardBackgroundSecondaryBrush" Color="#80F6F6F6" />
+      <SolidColorBrush x:Key="CardStrokeBrush" Color="#0F000000" />
+      <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="#FBFBFB" />
+      <SolidColorBrush x:Key="FlyoutBackgroundBrush" Color="#F9F9F9" />
+      <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#1F000000" />
+      <SolidColorBrush x:Key="DividerBrush" Color="#14000000" />
+      <!-- Controls -->
+      <SolidColorBrush x:Key="ControlFillBrush" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="ControlFillHoverBrush" Color="#80F9F9F9" />
+      <SolidColorBrush x:Key="ControlFillPressedBrush" Color="#4DF9F9F9" />
+      <SolidColorBrush x:Key="ControlFillInputActiveBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="#0F000000" />
+      <SolidColorBrush x:Key="ControlStrongStrokeBrush" Color="#72000000" />
+      <SolidColorBrush x:Key="SubtleFillHoverBrush" Color="#09000000" />
+      <SolidColorBrush x:Key="SubtleFillPressedBrush" Color="#06000000" />
+      <SolidColorBrush x:Key="SubtleFillSelectedBrush" Color="#0C000000" />
+      <SolidColorBrush x:Key="ChipBackgroundBrush" Color="#0F000000" />
+      <!-- Text -->
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E4000000" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9E000000" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#72000000" />
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#5C000000" />
+      <!-- Brand -->
+      <SolidColorBrush x:Key="BrandBrush" Color="#F0B21B" />
+      <SolidColorBrush x:Key="BrandHoverBrush" Color="#F2BC3B" />
+      <SolidColorBrush x:Key="BrandPressedBrush" Color="#DDA315" />
+      <SolidColorBrush x:Key="BrandTextBrush" Color="#8F5D04" />
+      <SolidColorBrush x:Key="BrandTintBrush" Color="#24F0B21B" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#B07000" />
+      <Color x:Key="BrandColor">#F0B21B</Color>
+      <!-- Status -->
+      <SolidColorBrush x:Key="CriticalBrush" Color="#C42B1C" />
+      <SolidColorBrush x:Key="CriticalBackgroundBrush" Color="#FDE7E9" />
+      <SolidColorBrush x:Key="StopFillBrush" Color="#C42B1C" />
+      <SolidColorBrush x:Key="StopFillHoverBrush" Color="#B02719" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F" />
+      <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#DFF6DD" />
+      <SolidColorBrush x:Key="CautionBrush" Color="#9D5D00" />
+      <SolidColorBrush x:Key="CautionBackgroundBrush" Color="#FFF4CE" />
+      <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#F6F6F6" />
+      <!-- Calendar -->
+      <SolidColorBrush x:Key="CalendarHourLineBrush" Color="#14000000" />
+      <SolidColorBrush x:Key="CalendarHalfHourLineBrush" Color="#09000000" />
+      <SolidColorBrush x:Key="CalendarWeekendBrush" Color="#06000000" />
+      <SolidColorBrush x:Key="CalendarLockedBrush" Color="#0D000000" />
+      <SolidColorBrush x:Key="ActivityBandBrush" Color="#06000000" />
+      <!-- Logo -->
+      <SolidColorBrush x:Key="LogoInkBrush" Color="#0E1322" />
+      <SolidColorBrush x:Key="LogoAccentBrush" Color="#E79D00" />
+      <!-- Fluent control resources, re-pointed at Windows 11 values. -->
+      <SolidColorBrush x:Key="ButtonBackground" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#80F9F9F9" />
+      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#4DF9F9F9" />
+      <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#4DF9F9F9" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#1F000000" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#1F000000" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#0F000000" />
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#0F000000" />
+      <SolidColorBrush x:Key="ButtonForeground" Color="#E4000000" />
+      <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#E4000000" />
+      <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#9E000000" />
+      <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#5C000000" />
+      <SolidColorBrush x:Key="TextControlBackground" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#80F9F9F9" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="#29000000" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#29000000" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B07000" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#9E000000" />
+      <SolidColorBrush x:Key="ComboBoxBackground" Color="#B3FFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#80F9F9F9" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#29000000" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#29000000" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#F9F9F9" />
+      <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#F9F9F9" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="#1F000000" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F9F9F9" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#1F000000" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#202020" />
+      <SolidColorBrush x:Key="LayerBackgroundBrush" Color="#4C3A3A3A" />
+      <SolidColorBrush x:Key="LayerStrokeBrush" Color="#19000000" />
+      <SolidColorBrush x:Key="CardBackgroundBrush" Color="#0DFFFFFF" />
+      <SolidColorBrush x:Key="CardBackgroundSecondaryBrush" Color="#08FFFFFF" />
+      <SolidColorBrush x:Key="CardStrokeBrush" Color="#33000000" />
+      <SolidColorBrush x:Key="SolidCardBackgroundBrush" Color="#2B2B2B" />
+      <SolidColorBrush x:Key="FlyoutBackgroundBrush" Color="#2C2C2C" />
+      <SolidColorBrush x:Key="FlyoutStrokeBrush" Color="#33000000" />
+      <SolidColorBrush x:Key="DividerBrush" Color="#15FFFFFF" />
+      <SolidColorBrush x:Key="ControlFillBrush" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="ControlFillHoverBrush" Color="#15FFFFFF" />
+      <SolidColorBrush x:Key="ControlFillPressedBrush" Color="#08FFFFFF" />
+      <SolidColorBrush x:Key="ControlFillInputActiveBrush" Color="#B31E1E1E" />
+      <SolidColorBrush x:Key="ControlStrokeBrush" Color="#12FFFFFF" />
+      <SolidColorBrush x:Key="ControlStrongStrokeBrush" Color="#8BFFFFFF" />
+      <SolidColorBrush x:Key="SubtleFillHoverBrush" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="SubtleFillPressedBrush" Color="#0AFFFFFF" />
+      <SolidColorBrush x:Key="SubtleFillSelectedBrush" Color="#12FFFFFF" />
+      <SolidColorBrush x:Key="ChipBackgroundBrush" Color="#17FFFFFF" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C5FFFFFF" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#87FFFFFF" />
+      <SolidColorBrush x:Key="TextDisabledBrush" Color="#5DFFFFFF" />
+      <SolidColorBrush x:Key="BrandBrush" Color="#F7BE2B" />
+      <SolidColorBrush x:Key="BrandHoverBrush" Color="#F8C64A" />
+      <SolidColorBrush x:Key="BrandPressedBrush" Color="#E3AA1F" />
+      <SolidColorBrush x:Key="BrandTextBrush" Color="#F7BE2B" />
+      <SolidColorBrush x:Key="BrandTintBrush" Color="#2EF7BE2B" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#C27C00" />
+      <Color x:Key="BrandColor">#F7BE2B</Color>
+      <SolidColorBrush x:Key="CriticalBrush" Color="#FF99A4" />
+      <SolidColorBrush x:Key="CriticalBackgroundBrush" Color="#442726" />
+      <SolidColorBrush x:Key="StopFillBrush" Color="#D13438" />
+      <SolidColorBrush x:Key="StopFillHoverBrush" Color="#DE4A4E" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#6CCB5F" />
+      <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#393D1B" />
+      <SolidColorBrush x:Key="CautionBrush" Color="#FCE100" />
+      <SolidColorBrush x:Key="CautionBackgroundBrush" Color="#433519" />
+      <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#2E2E2E" />
+      <SolidColorBrush x:Key="CalendarHourLineBrush" Color="#17FFFFFF" />
+      <SolidColorBrush x:Key="CalendarHalfHourLineBrush" Color="#0AFFFFFF" />
+      <SolidColorBrush x:Key="CalendarWeekendBrush" Color="#06FFFFFF" />
+      <SolidColorBrush x:Key="CalendarLockedBrush" Color="#0DFFFFFF" />
+      <SolidColorBrush x:Key="ActivityBandBrush" Color="#06FFFFFF" />
+      <SolidColorBrush x:Key="LogoInkBrush" Color="#E9ECF2" />
+      <SolidColorBrush x:Key="LogoAccentBrush" Color="#F7BE2B" />
+      <SolidColorBrush x:Key="ButtonBackground" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#15FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#08FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#0BFFFFFF" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#18FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#18FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#12FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#12FFFFFF" />
+      <SolidColorBrush x:Key="ButtonForeground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#C5FFFFFF" />
+      <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#5DFFFFFF" />
+      <SolidColorBrush x:Key="TextControlBackground" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#15FFFFFF" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#1E1E1E" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="#2EFFFFFF" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#2EFFFFFF" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#F7BE2B" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#C5FFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxBackground" Color="#0FFFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#15FFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#2EFFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#2EFFFFFF" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#2C2C2C" />
+      <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="#2C2C2C" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="#33000000" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#2C2C2C" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#33000000" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>
