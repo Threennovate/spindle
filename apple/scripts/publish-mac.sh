@@ -11,7 +11,8 @@
 #   - the update signing key in the keychain: apple/build.noindex/sparkle-2.10.0/bin/generate_keys -f KEY_FILE;
 #   - SSH to the server: SPINDLE_UPLOAD_SSH names the host (e.g. from ~/.ssh/config), SPINDLE_DOWNLOADS_PATH the
 #     downloads folder there, and SPINDLE_RELEASE_USER the account the workflow uploads with (MAC_UPLOAD_USER), which a
-#     root login publishes as. SSH asks for the key's passphrase each time unless the key is in ssh-agent:
+#     root login publishes as, set in the environment or in the git-ignored infra/.env. SSH asks for the key's
+#     passphrase each time unless the key is in ssh-agent:
 #     ssh-add --apple-use-keychain ~/.ssh/id_ed25519
 #
 # While Actions work, don't use it: the tag it pushes starts the Mac release workflow, which would build and publish
@@ -20,10 +21,12 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 apple="$root/apple"
-upload_ssh="${SPINDLE_UPLOAD_SSH:?Set SPINDLE_UPLOAD_SSH to the SSH host of the server.}"
-downloads_path="${SPINDLE_DOWNLOADS_PATH:?Set SPINDLE_DOWNLOADS_PATH to the downloads folder on the server.}"
+# shellcheck source=../../scripts/release-settings.sh
+source "$root/scripts/release-settings.sh"
+upload_ssh="${SPINDLE_UPLOAD_SSH:?Set SPINDLE_UPLOAD_SSH (user@host, or a Host from ~/.ssh/config) here or in infra/.env.}"
+downloads_path="${SPINDLE_DOWNLOADS_PATH:?Set SPINDLE_DOWNLOADS_PATH to the downloads folder on the server, here or in infra/.env.}"
 # The account the workflow uploads with. Over a root login, publishing runs as it, so the files are the same as CI's.
-release_user="${SPINDLE_RELEASE_USER:?Set SPINDLE_RELEASE_USER to the account the workflow uploads with.}"
+release_user="${SPINDLE_RELEASE_USER:?Set SPINDLE_RELEASE_USER to the account the workflow uploads with, here or in infra/.env.}"
 sparkle_tools="$apple/build.noindex/sparkle-2.10.0/bin"
 
 # Python from python.org has no certificates of its own until its "Install Certificates" step runs, so its downloads
@@ -73,8 +76,8 @@ if [[ -z "$profile" ]]; then
     done
 fi
 [[ -f "$profile" ]] || fail "No Developer ID profile for the Mac app's passkeys. Set SPINDLE_MAC_PROVISIONING_PROFILE."
-ssh -o ConnectTimeout=15 "$upload_ssh" "test -d '$downloads_path' && { [ \"\$(id -u)\" != 0 ] || id '$release_user' >/dev/null; }" \
-    || fail "Can't reach $downloads_path on $upload_ssh over SSH, or the server has no $release_user account."
+ssh -o ConnectTimeout=15 -o BatchMode=yes "$upload_ssh" "test -d '$downloads_path' && { [ \"\$(id -u)\" != 0 ] || id '$release_user' >/dev/null; }" \
+    || fail "Can't reach $downloads_path on $upload_ssh over SSH with a key, or the server has no $release_user account. SSH asks no password here: name the user (user@host) and load the key (ssh-add)."
 
 step "Testing"
 swift test --package-path apple/SpindleKit

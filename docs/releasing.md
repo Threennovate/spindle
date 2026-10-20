@@ -92,9 +92,19 @@ You need Xcode and XcodeGen. The first run of `release-mac.sh` downloads Sparkle
   published with mode 0644 so the API container can read them.
 
 Without the workflows, `apple/scripts/publish-mac.sh` does the same from an up-to-date `main`, with the certificate,
-notarization profile and update key in this Mac's keychain and `SPINDLE_UPLOAD_SSH`, `SPINDLE_DOWNLOADS_PATH` and
-`SPINDLE_RELEASE_USER` set. It pushes the `mac-X.Y.Z` tag at the end, so don't use it while the workflows run: the tag
+notarization profile and update key in this Mac's keychain and the server's address in `infra/.env` (below). It pushes the `mac-X.Y.Z` tag at the end, so don't use it while the workflows run: the tag
 would start **Mac release** too.
+
+Both publish scripts read where they publish from the environment or, failing that, from the git-ignored `infra/.env`:
+
+```sh
+SPINDLE_UPLOAD_SSH=user@host           # or a Host from ~/.ssh/config
+SPINDLE_DOWNLOADS_PATH=/path/to/downloads
+SPINDLE_RELEASE_USER=account           # owns the published files; MAC_UPLOAD_USER in the workflow
+```
+
+They are the `mac-publish` environment's host, path and user. SSH has to get in with a key, without asking: name the
+user (SSH otherwise uses this Mac's) and add the key to ssh-agent (`ssh-add --apple-use-keychain ~/.ssh/id_ed25519`).
 
 The publisher takes a lock, checks file hashes, refuses older builds and changed existing versions, keeps previous
 downloads, and replaces `appcast.xml` last, so a failed upload leaves the previous release active. Fix a bad version
@@ -151,8 +161,7 @@ Mac:
 
 1. In a pull request, raise `<Version>` in `windows/Directory.Build.props`, add `windows/ReleaseNotes/X.Y.Z.md`, and
    run `scripts/check.sh windows`.
-2. From an up-to-date `main`, with `SPINDLE_UPLOAD_SSH`, `SPINDLE_DOWNLOADS_PATH` and `SPINDLE_RELEASE_USER` set as for
-   the Mac, run `windows/scripts/publish-windows.sh`. It checks the version, notes and tag, runs the Windows checks,
+2. From an up-to-date `main`, with the server in `infra/.env` as for the Mac, run `windows/scripts/publish-windows.sh`. It checks the version, notes and tag, runs the Windows checks,
    builds both architectures, uploads the files with each feed last, compares what the server serves with what was
    built, and pushes the `windows-X.Y.Z` tag.
 3. Install the previous version on a Windows PC and check that it updates (**Settings → General → About → Check for

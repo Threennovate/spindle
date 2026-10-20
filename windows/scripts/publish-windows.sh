@@ -9,7 +9,7 @@
 # (windows/ReleaseNotes/X.Y.Z.md). It needs .NET (global.json), Python 3, and SSH to the server, as
 # apple/scripts/publish-mac.sh does: SPINDLE_UPLOAD_SSH names the host (e.g. from ~/.ssh/config), SPINDLE_DOWNLOADS_PATH
 # the downloads folder there, and SPINDLE_RELEASE_USER the account that owns the published files, which a root login
-# publishes as. The server needs Python 3.11+ and rsync.
+# publishes as, set in the environment or in the git-ignored infra/.env. The server needs Python 3.11+ and rsync.
 #
 # The builds aren't signed yet: Windows shows SmartScreen's "unknown publisher" prompt on the first install. Updates
 # that the installed app downloads itself don't show it.
@@ -17,9 +17,11 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 windows="$root/windows"
-upload_ssh="${SPINDLE_UPLOAD_SSH:?Set SPINDLE_UPLOAD_SSH to the SSH host of the server.}"
-downloads_path="${SPINDLE_DOWNLOADS_PATH:?Set SPINDLE_DOWNLOADS_PATH to the downloads folder on the server.}"
-release_user="${SPINDLE_RELEASE_USER:?Set SPINDLE_RELEASE_USER to the account that owns the published files.}"
+# shellcheck source=../../scripts/release-settings.sh
+source "$root/scripts/release-settings.sh"
+upload_ssh="${SPINDLE_UPLOAD_SSH:?Set SPINDLE_UPLOAD_SSH (user@host, or a Host from ~/.ssh/config) here or in infra/.env.}"
+downloads_path="${SPINDLE_DOWNLOADS_PATH:?Set SPINDLE_DOWNLOADS_PATH to the downloads folder on the server, here or in infra/.env.}"
+release_user="${SPINDLE_RELEASE_USER:?Set SPINDLE_RELEASE_USER to the account that owns the published files, here or in infra/.env.}"
 
 # Python from python.org has no certificates of its own until its "Install Certificates" step runs.
 if [[ -z "${SSL_CERT_FILE:-}" && -f /etc/ssl/cert.pem ]]; then
@@ -47,8 +49,8 @@ feed="$(property SpindleUpdatesUrl)"
 prefix="${BASH_REMATCH[1]}"
 commit="$(git rev-parse HEAD)"
 echo "Releasing $tag from ${commit:0:7} to $prefix"
-ssh -o ConnectTimeout=15 "$upload_ssh" "test -d '$downloads_path' && { [ \"\$(id -u)\" != 0 ] || id '$release_user' >/dev/null; }" \
-    || fail "Can't reach $downloads_path on $upload_ssh over SSH, or the server has no $release_user account."
+ssh -o ConnectTimeout=15 -o BatchMode=yes "$upload_ssh" "test -d '$downloads_path' && { [ \"\$(id -u)\" != 0 ] || id '$release_user' >/dev/null; }" \
+    || fail "Can't reach $downloads_path on $upload_ssh over SSH with a key, or the server has no $release_user account. SSH asks no password here: name the user (user@host) and load the key (ssh-add)."
 
 step "Testing"
 bash scripts/check.sh windows
