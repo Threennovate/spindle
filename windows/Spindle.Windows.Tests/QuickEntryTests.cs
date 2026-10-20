@@ -30,7 +30,7 @@ public sealed class QuickEntryTests
             Assert.Equal("Start “Review the booking flow”", preview.Title);
             Assert.Contains("AnchorNet", preview.Detail);
             await Preview(quick, "quick-entry-typed");
-            var before = DateTimeOffset.UtcNow;
+            var before = TestClock.Now;
             await quick.RunRowAsync(quick.Rows.ToList().FindIndex(r => r.Id == "sentence.entry"));
             Assert.NotNull(window.Running);
             Assert.Equal("Review the booking flow", window.Running.Description);

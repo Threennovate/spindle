@@ -177,7 +177,7 @@ public sealed class ShellTests
         {
             using var fixture = new ApiFixture();
             fixture.Entries.Add(new() { Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Completed work",
-                Start = DateTimeOffset.UtcNow.AddHours(-1), Stop = DateTimeOffset.UtcNow.AddMinutes(-30) });
+                Start = TestClock.Now.AddHours(-1), Stop = TestClock.Now.AddMinutes(-30) });
             var window = await SignedIn(fixture);
             var timer = Controls<TimerView>(window).Single();
             var deleting = timer.DeleteAsync(window.Entries.Single());

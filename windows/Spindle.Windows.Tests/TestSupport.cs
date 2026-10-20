@@ -174,12 +174,12 @@ internal sealed class ApiFixture : HttpMessageHandler
         if (request.RequestUri.AbsolutePath == "/api/auth/external/exchange")
         {
             AuthRequests.Add(new(request.Method, request.RequestUri.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken)));
-            return Json(new ExternalSignInResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1), NewAccount = true });
+            return Json(new ExternalSignInResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = TestClock.Now.AddHours(1), NewAccount = true });
         }
         if (request.RequestUri.AbsolutePath is "/api/auth/login" or "/api/auth/register")
         {
             AuthRequests.Add(new(request.Method, request.RequestUri.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken)));
-            return Json(new AuthTokensResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1) });
+            return Json(new AuthTokensResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = TestClock.Now.AddHours(1) });
         }
         if (request.RequestUri.AbsolutePath == "/api/auth/logout") return new(HttpStatusCode.NoContent);
         Assert.Equal("test-token", request.Headers.Authorization?.Parameter);
@@ -242,7 +242,7 @@ internal sealed class ApiFixture : HttpMessageHandler
                 if (HoldSettingsChange is { } hold) await hold.Task;
                 if (FailSettingsChange) return new(HttpStatusCode.InternalServerError);
                 var change = JsonSerializer.Deserialize<AgentActivitySettingsRequest>(body, SpindleApiClient.JsonOptions)!;
-                AgentActivity = new() { Sync = change.Sync, Titles = change.Sync && change.Titles, SyncedSince = change.Sync ? AgentActivity.SyncedSince ?? DateTimeOffset.UtcNow : null };
+                AgentActivity = new() { Sync = change.Sync, Titles = change.Sync && change.Titles, SyncedSince = change.Sync ? AgentActivity.SyncedSince ?? TestClock.Now : null };
                 return Json(AgentActivity);
             }
             if (path.EndsWith("/stop"))
@@ -260,7 +260,7 @@ internal sealed class ApiFixture : HttpMessageHandler
                 var created = new TimeEntryResponse
                 {
                     Id = create.Id ?? Guid.NewGuid(), WorkspaceId = Workspace, Description = create.Description ?? "", ProjectId = create.ProjectId,
-                    TaskId = create.TaskId, IsBillable = create.IsBillable ?? false, TagIds = create.TagIds ?? [], Start = create.Start ?? DateTimeOffset.UtcNow, Stop = create.Stop,
+                    TaskId = create.TaskId, IsBillable = create.IsBillable ?? false, TagIds = create.TagIds ?? [], Start = create.Start ?? TestClock.Now, Stop = create.Stop,
                     Shares = create.Shares?.Select(s => new TimeShareResponse { ProjectId = s.ProjectId, TaskId = s.TaskId, Percent = s.Percent, IsBillable = s.IsBillable ?? false, Description = s.Description }).ToArray() ?? [],
                 };
                 var (createdShares, createdDescription) = SplitMath.Described(created.Shares, created.Description, create.DescribeParts, null);
@@ -373,7 +373,7 @@ internal sealed class ApiFixture : HttpMessageHandler
         var entry = new TimeEntryResponse
         {
             Id = current?.Id ?? Guid.NewGuid(), WorkspaceId = Workspace, Description = saved.Description ?? "", ProjectId = saved.ProjectId, TaskId = saved.TaskId,
-            TagIds = saved.TagIds ?? [], IsBillable = saved.IsBillable ?? false, Start = saved.Start ?? DateTimeOffset.UtcNow, Stop = saved.Stop,
+            TagIds = saved.TagIds ?? [], IsBillable = saved.IsBillable ?? false, Start = saved.Start ?? TestClock.Now, Stop = saved.Stop,
             Shares = saved.Shares?.Select(s => new TimeShareResponse { ProjectId = s.ProjectId, TaskId = s.TaskId, Percent = s.Percent, IsBillable = s.IsBillable ?? false, Description = s.Description }).ToArray() ?? [],
         };
         var (shares, description) = SplitMath.Described(entry.Shares, entry.Description, saved.DescribeParts, current);
@@ -523,7 +523,7 @@ internal static class TestData
         var meeting = new TagResponse { Id = Guid.NewGuid(), Name = "meeting" };
         fixture.Tags = [review, meeting];
         var zone = ApiFixture.Zagreb;
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).Date);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(TestClock.Now, zone).Date);
         DateTimeOffset At(int daysAgo, double hour)
         {
             var local = today.AddDays(-daysAgo).ToDateTime(TimeOnly.MinValue).AddHours(hour);
@@ -533,7 +533,7 @@ internal static class TestData
         {
             var start = At(daysAgo, from);
             var stop = At(daysAgo, to);
-            if (stop > DateTimeOffset.UtcNow) return;
+            if (stop > TestClock.Now) return;
             fixture.Entries.Add(new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = description, ProjectId = project?.Id, TaskId = task, IsBillable = project?.IsBillable ?? false,
@@ -558,7 +558,7 @@ internal static class TestData
             fixture.Entries.Add(new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Review PR for the booking flow", ProjectId = projects[0].Id,
-                TaskId = projects[0].Tasks[0].Id, IsBillable = true, TagIds = [review.Id], Start = DateTimeOffset.UtcNow.AddMinutes(-47).AddSeconds(-12),
+                TaskId = projects[0].Tasks[0].Id, IsBillable = true, TagIds = [review.Id], Start = TestClock.Now.AddMinutes(-47).AddSeconds(-12),
             });
         }
     }

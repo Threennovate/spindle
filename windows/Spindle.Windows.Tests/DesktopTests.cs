@@ -18,13 +18,13 @@ public sealed class DesktopTests
         await session.Dispatch(async () =>
         {
             using var fixture = new ApiFixture();
-            var start = DateTimeOffset.UtcNow.AddMinutes(-60);
+            var start = TestClock.Now.AddMinutes(-60);
             fixture.Entries.Add(new TimeEntryResponse { Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Code review", ProjectId = fixture.Projects[1].Id, Start = start });
             var window = await SignedIn(fixture);
             window.Desktop.Stop();
             var away = TimeSpan.FromMinutes(12);
             var desktop = new DesktopService(window, () => away);
-            var now = DateTimeOffset.UtcNow;
+            var now = TestClock.Now;
             await desktop.TickAsync(now);
             Assert.False(window.Dialogs.IsVisible);
             away = TimeSpan.FromSeconds(1);
@@ -51,7 +51,7 @@ public sealed class DesktopTests
         {
             using var fixture = new ApiFixture();
             fixture.Preferences = fixture.Preferences with { PomodoroEnabled = true, PomodoroMinutes = 25, PomodoroBreakMinutes = 5, PomodoroAutoStop = true };
-            var start = DateTimeOffset.UtcNow.AddMinutes(-26);
+            var start = TestClock.Now.AddMinutes(-26);
             fixture.Entries.Add(new TimeEntryResponse { Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Write the release notes", ProjectId = fixture.Projects[1].Id, Start = start });
             var window = await SignedIn(fixture);
             window.Desktop.Stop();
