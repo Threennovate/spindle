@@ -43,7 +43,7 @@ with `docker compose --profile mailpit up -d`, set the three `Smtp__` lines for 
 
 ### Building the image yourself
 
-Until there is a release on GHCR, or to run code you changed, build the image from the checkout:
+To run code you changed, build the image from the checkout:
 
 ```bash
 docker compose up -d --build
