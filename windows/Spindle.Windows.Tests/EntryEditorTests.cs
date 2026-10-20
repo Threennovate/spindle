@@ -21,7 +21,8 @@ public sealed class EntryEditorTests
             projects[0] = projects[0] with { ArchivedAt = DateTimeOffset.UtcNow.AddDays(-1) };
             var tag = new TagResponse { Id = Guid.NewGuid(), Name = "Research" };
             fixture.Tags = [tag];
-            var started = DateTimeOffset.UtcNow.AddDays(-2).AddSeconds(-17);
+            // Whole seconds: the tracker keeps instants to the microsecond, as PostgreSQL does, and Windows clocks have finer ticks.
+            var started = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.AddDays(-2).AddSeconds(-17).ToUnixTimeSeconds());
             var entry = new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Parallel work", Start = started,

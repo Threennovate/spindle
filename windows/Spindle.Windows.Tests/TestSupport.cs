@@ -391,16 +391,21 @@ internal sealed class ApiFixture : HttpMessageHandler
     }
 
     /// <summary>
-    /// Deletes a test's folder, waiting a moment for a save still closing its file: Windows doesn't delete files that
-    /// are open.
+    /// Deletes a test's folder, letting a save still closing its file finish first: Windows doesn't delete files that
+    /// are open, and the save goes on on the UI thread a test disposes its fixture on.
     /// </summary>
     internal static void DeleteDirectory(string path)
     {
         for (var attempt = 1; Directory.Exists(path); attempt++)
         {
             try { Directory.Delete(path, true); }
-            catch (IOException) when (attempt < 20) { Thread.Sleep(50); }
-            catch (UnauthorizedAccessException) when (attempt < 20) { Thread.Sleep(50); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < 20) { Settle(); }
+        }
+
+        static void Settle()
+        {
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(50);
         }
     }
 
