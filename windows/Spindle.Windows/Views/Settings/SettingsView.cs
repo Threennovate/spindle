@@ -285,7 +285,7 @@ public sealed class SettingsView : UserControl, ILivePage
         {
             var on = Preferences.RemindsOn(day);
             var toggle = new Button { Content = letter, Width = 32, Height = 32, Padding = new Thickness(0), CornerRadius = new CornerRadius(16) }.Classed(on ? "primary" : "")
-                .Spoken(System.Globalization.CultureInfo.GetCultureInfo("en-GB").DateTimeFormat.DayNames[day]);
+                .Spoken(BritishEnglish.Culture.DateTimeFormat.DayNames[day]);
             toggle.Click += (_, _) => Save(p => p with { ReminderDayMask = p.ReminderDayMask ^ (1 << day) });
             days.Children.Add(toggle);
         }

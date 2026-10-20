@@ -281,7 +281,7 @@ public sealed class SplitDescriptionTests
     private static TimeEntryResponse Split(ApiFixture fixture, string description, params string?[] parts)
     {
         var projects = fixture.Projects;
-        var started = DateTimeOffset.UtcNow.AddDays(-2);
+        var started = TestClock.Now.AddDays(-2);
         var entry = new TimeEntryResponse
         {
             Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = description, Start = started, Stop = started.AddHours(2),

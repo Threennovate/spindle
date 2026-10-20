@@ -218,7 +218,8 @@ static async Task OfflinePartDescriptions()
     try
     {
         var offline = false; var workspace = Guid.NewGuid(); var puts = new List<TimeEntryRequest>();
-        var start = DateTimeOffset.UtcNow.AddHours(-3);
+        // Whole seconds: the tracker keeps instants to the microsecond, as PostgreSQL does, and Windows clocks have finer ticks.
+        var start = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.AddHours(-3).ToUnixTimeSeconds());
         var entry = new TimeEntryResponse
         {
             Id = Guid.NewGuid(), WorkspaceId = workspace, Description = "Fix login; Review PR", Start = start, Stop = start.AddHours(2),

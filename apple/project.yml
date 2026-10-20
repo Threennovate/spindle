@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "2.4.1"
+    MARKETING_VERSION: "2.5.0"
     CURRENT_PROJECT_VERSION: "1"
     # Threennovate d.o.o. (not the Apple ID's free Personal Team, which can't make Ad Hoc or Developer ID builds).
     DEVELOPMENT_TEAM: 9ARDA688G5

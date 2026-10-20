@@ -37,7 +37,7 @@ public sealed class BranchRulesTests
         ];
     }
 
-    private static string Beacon => RepositoryResolver.PathIdentity("/tmp/spindle-activity-repos/beacon");
+    private static string Beacon => RepositoryResolver.PathIdentity(AgentLogs.Repository("beacon"));
 
     /// <summary>beacon linked to Beacon, with feature/* going to Delta · Support.</summary>
     private static RepositoryLinkResponse[] Links(ApiFixture fixture, bool rules = true) =>

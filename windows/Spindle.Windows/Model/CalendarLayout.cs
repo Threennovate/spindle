@@ -81,7 +81,7 @@ public static class CalendarLayout
     public static string Label(IReadOnlyList<DateOnly> days)
     {
         if (days.Count == 0) return "";
-        var english = CultureInfo.GetCultureInfo("en-GB");
+        var english = BritishEnglish.Culture;
         var (first, last) = (days[0], days[^1]);
         if (first == last) return first.ToString("dddd d MMMM yyyy", english);
         var sameMonth = first.Year == last.Year && first.Month == last.Month;

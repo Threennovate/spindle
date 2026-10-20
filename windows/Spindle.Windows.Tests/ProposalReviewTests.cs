@@ -12,7 +12,7 @@ namespace Spindle.Windows.Tests;
 public sealed class ProposalReviewTests
 {
     private static readonly TimeZoneInfo Zagreb = ApiFixture.Zagreb;
-    private static readonly DateOnly Yesterday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Zagreb).DateTime).AddDays(-1);
+    private static readonly DateOnly Yesterday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(TestClock.Now, Zagreb).DateTime).AddDays(-1);
     private static DateTimeOffset At(double hours)
     {
         var time = Yesterday.ToDateTime(new TimeOnly((int)hours, (int)Math.Round(hours % 1 * 60)));
@@ -21,7 +21,7 @@ public sealed class ProposalReviewTests
 
     private static AgentProposal Proposal(ApiFixture fixture, Guid? entryId, TimeEntryResponse? original, ProposalFields fields, string reason) => new()
     {
-        WorkspaceId = fixture.Workspace, EntryId = entryId, Original = original, Fields = fields, Reason = reason, Client = "Claude Code", ProposedAt = DateTimeOffset.UtcNow,
+        WorkspaceId = fixture.Workspace, EntryId = entryId, Original = original, Fields = fields, Reason = reason, Client = "Claude Code", ProposedAt = TestClock.Now,
     };
 
     /// <summary>Two new entries (one split described per project) and a change, as Claude Code would propose them filling in yesterday.

@@ -18,10 +18,10 @@ public sealed class EntryEditorTests
         {
             using var fixture = new ApiFixture();
             var projects = fixture.Projects;
-            projects[0] = projects[0] with { ArchivedAt = DateTimeOffset.UtcNow.AddDays(-1) };
+            projects[0] = projects[0] with { ArchivedAt = TestClock.Now.AddDays(-1) };
             var tag = new TagResponse { Id = Guid.NewGuid(), Name = "Research" };
             fixture.Tags = [tag];
-            var started = DateTimeOffset.UtcNow.AddDays(-2).AddSeconds(-17);
+            var started = TestClock.Now.AddDays(-2).AddSeconds(-17);
             var entry = new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Parallel work", Start = started,
@@ -153,7 +153,7 @@ public sealed class EntryEditorTests
         {
             using var fixture = new ApiFixture();
             fixture.Settings = fixture.Settings with { RequireProject = true };
-            fixture.Entries.Add(new TimeEntryResponse { Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "No project yet", Start = DateTimeOffset.UtcNow.AddMinutes(-20) });
+            fixture.Entries.Add(new TimeEntryResponse { Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "No project yet", Start = TestClock.Now.AddMinutes(-20) });
             var window = await SignedIn(fixture);
             var stopping = window.StopAsync();
             var editor = await Dialog<EntryEditor>(window);

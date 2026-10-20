@@ -11,10 +11,10 @@ public sealed class ProposalInboxTests
     private static AgentProposal Proposal(Guid workspace, Guid project, string description, string client = "Codex") => new()
     {
         WorkspaceId = workspace,
-        Fields = new(DateTimeOffset.UtcNow.AddHours(-3), DateTimeOffset.UtcNow.AddHours(-2), description, ProposalWork.One(project, null, false)),
+        Fields = new(TestClock.Now.AddHours(-3), TestClock.Now.AddHours(-2), description, ProposalWork.One(project, null, false)),
         Reason = "Commits on main",
         Client = client,
-        ProposedAt = DateTimeOffset.UtcNow,
+        ProposedAt = TestClock.Now,
     };
 
     [Fact]
@@ -86,8 +86,8 @@ public sealed class ProposalInboxTests
         var project = Guid.NewGuid();
         var response = new AgentProposalResponse
         {
-            Id = Guid.NewGuid(), WorkspaceId = Guid.NewGuid(), EntryId = Guid.NewGuid(), Reason = "Ran late", Client = "Claude Code", ProposedAt = DateTimeOffset.UtcNow,
-            Original = new() { Start = DateTimeOffset.UtcNow.AddHours(-2), Stop = DateTimeOffset.UtcNow.AddHours(-1), Description = "Standup", ProjectId = project, IsBillable = true },
+            Id = Guid.NewGuid(), WorkspaceId = Guid.NewGuid(), EntryId = Guid.NewGuid(), Reason = "Ran late", Client = "Claude Code", ProposedAt = TestClock.Now,
+            Original = new() { Start = TestClock.Now.AddHours(-2), Stop = TestClock.Now.AddHours(-1), Description = "Standup", ProjectId = project, IsBillable = true },
             Fields = new()
             {
                 Work = new() { ProjectId = project, IsBillable = true, Shares = [

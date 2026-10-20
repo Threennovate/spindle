@@ -9,7 +9,7 @@ public enum ReportPeriod { Today, Yesterday, ThisWeek, LastWeek, ThisMonth, Last
 /// <summary>A report's days, first and last included, as on the Mac and the web.</summary>
 public readonly record struct DayRange(DateOnly From, DateOnly To)
 {
-    private static readonly CultureInfo English = CultureInfo.GetCultureInfo("en-GB");
+    private static readonly CultureInfo English = BritishEnglish.Culture;
 
     public static string Label(ReportPeriod period) => period switch
     {

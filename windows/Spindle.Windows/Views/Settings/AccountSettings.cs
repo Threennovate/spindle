@@ -73,7 +73,7 @@ public sealed class AccountSettings : UserControl
         var week = Choice([(0, "Sunday"), (1, "Monday"), (2, "Tuesday"), (3, "Wednesday"), (4, "Thursday"), (5, "Friday"), (6, "Saturday")], p.WeekStart, _ => { });
         var sample = new DateTime(2026, 9, 28);
         var dateFormats = new[] { "d MMM yyyy", "dd.MM.yyyy", "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd" };
-        var date = Choice(dateFormats.Select(f => (f, sample.ToString(f, System.Globalization.CultureInfo.GetCultureInfo("en-GB")))).ToArray(), p.DateFormat, _ => { });
+        var date = Choice(dateFormats.Select(f => (f, sample.ToString(f, BritishEnglish.Culture))).ToArray(), p.DateFormat, _ => { });
         var clock = Choice([("24h", "24-hour (13:30)"), ("12h", "12-hour (1:30 PM)")], p.TimeFormat == "12h" ? "12h" : "24h", _ => { });
         var durations = Choice([("hms", "1:30:00"), ("hm", "1:30"), ("decimal", "1.50 h")], p.DurationFormat is { Length: > 0 } format ? format : "hms", _ => { });
         var savePreferences = Ui.Button("Save", async () =>

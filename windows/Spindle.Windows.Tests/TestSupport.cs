@@ -103,7 +103,8 @@ internal static class TestUi
     internal static async Task<MainWindow> SignedIn(ApiFixture fixture)
     {
         await fixture.SignIn();
-        var window = new MainWindow(fixture.Api, new PreferencesStore(Path.Combine(fixture.DataDirectory, "preferences.json")), fixture.DataDirectory);
+        // At the PC: a build machine's real idle time would hold reminders back.
+        var window = new MainWindow(fixture.Api, new PreferencesStore(Path.Combine(fixture.DataDirectory, "preferences.json")), fixture.DataDirectory, () => TimeSpan.Zero);
         window.Show();
         await WaitFor(() => Controls<TextBox>(window).Any(x => x.Name is "TimerDescription" or "RunningDescription"));
         await Task.Delay(50);
@@ -173,12 +174,12 @@ internal sealed class ApiFixture : HttpMessageHandler
         if (request.RequestUri.AbsolutePath == "/api/auth/external/exchange")
         {
             AuthRequests.Add(new(request.Method, request.RequestUri.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken)));
-            return Json(new ExternalSignInResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1), NewAccount = true });
+            return Json(new ExternalSignInResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = TestClock.Now.AddHours(1), NewAccount = true });
         }
         if (request.RequestUri.AbsolutePath is "/api/auth/login" or "/api/auth/register")
         {
             AuthRequests.Add(new(request.Method, request.RequestUri.AbsolutePath, await request.Content!.ReadAsStringAsync(cancellationToken)));
-            return Json(new AuthTokensResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1) });
+            return Json(new AuthTokensResponse { AccessToken = "test-token", RefreshToken = "refresh-token", AccessTokenExpiresAt = TestClock.Now.AddHours(1) });
         }
         if (request.RequestUri.AbsolutePath == "/api/auth/logout") return new(HttpStatusCode.NoContent);
         Assert.Equal("test-token", request.Headers.Authorization?.Parameter);
@@ -241,7 +242,7 @@ internal sealed class ApiFixture : HttpMessageHandler
                 if (HoldSettingsChange is { } hold) await hold.Task;
                 if (FailSettingsChange) return new(HttpStatusCode.InternalServerError);
                 var change = JsonSerializer.Deserialize<AgentActivitySettingsRequest>(body, SpindleApiClient.JsonOptions)!;
-                AgentActivity = new() { Sync = change.Sync, Titles = change.Sync && change.Titles, SyncedSince = change.Sync ? AgentActivity.SyncedSince ?? DateTimeOffset.UtcNow : null };
+                AgentActivity = new() { Sync = change.Sync, Titles = change.Sync && change.Titles, SyncedSince = change.Sync ? AgentActivity.SyncedSince ?? TestClock.Now : null };
                 return Json(AgentActivity);
             }
             if (path.EndsWith("/stop"))
@@ -259,7 +260,7 @@ internal sealed class ApiFixture : HttpMessageHandler
                 var created = new TimeEntryResponse
                 {
                     Id = create.Id ?? Guid.NewGuid(), WorkspaceId = Workspace, Description = create.Description ?? "", ProjectId = create.ProjectId,
-                    TaskId = create.TaskId, IsBillable = create.IsBillable ?? false, TagIds = create.TagIds ?? [], Start = create.Start ?? DateTimeOffset.UtcNow, Stop = create.Stop,
+                    TaskId = create.TaskId, IsBillable = create.IsBillable ?? false, TagIds = create.TagIds ?? [], Start = create.Start ?? TestClock.Now, Stop = create.Stop,
                     Shares = create.Shares?.Select(s => new TimeShareResponse { ProjectId = s.ProjectId, TaskId = s.TaskId, Percent = s.Percent, IsBillable = s.IsBillable ?? false, Description = s.Description }).ToArray() ?? [],
                 };
                 var (createdShares, createdDescription) = SplitMath.Described(created.Shares, created.Description, create.DescribeParts, null);
@@ -372,7 +373,7 @@ internal sealed class ApiFixture : HttpMessageHandler
         var entry = new TimeEntryResponse
         {
             Id = current?.Id ?? Guid.NewGuid(), WorkspaceId = Workspace, Description = saved.Description ?? "", ProjectId = saved.ProjectId, TaskId = saved.TaskId,
-            TagIds = saved.TagIds ?? [], IsBillable = saved.IsBillable ?? false, Start = saved.Start ?? DateTimeOffset.UtcNow, Stop = saved.Stop,
+            TagIds = saved.TagIds ?? [], IsBillable = saved.IsBillable ?? false, Start = saved.Start ?? TestClock.Now, Stop = saved.Stop,
             Shares = saved.Shares?.Select(s => new TimeShareResponse { ProjectId = s.ProjectId, TaskId = s.TaskId, Percent = s.Percent, IsBillable = s.IsBillable ?? false, Description = s.Description }).ToArray() ?? [],
         };
         var (shares, description) = SplitMath.Described(entry.Shares, entry.Description, saved.DescribeParts, current);
@@ -385,8 +386,27 @@ internal sealed class ApiFixture : HttpMessageHandler
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && Directory.Exists(DataDirectory)) Directory.Delete(DataDirectory, true);
+        if (disposing) DeleteDirectory(DataDirectory);
         base.Dispose(disposing);
+    }
+
+    /// <summary>
+    /// Deletes a test's folder, letting a save still closing its file finish first: Windows doesn't delete files that
+    /// are open, and the save goes on on the UI thread a test disposes its fixture on.
+    /// </summary>
+    internal static void DeleteDirectory(string path)
+    {
+        for (var attempt = 1; Directory.Exists(path); attempt++)
+        {
+            try { Directory.Delete(path, true); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && attempt < 20) { Settle(); }
+        }
+
+        static void Settle()
+        {
+            if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(50);
+        }
     }
 
     internal static HttpResponseMessage Json<T>(T body) => new(HttpStatusCode.OK) { Content = JsonContent.Create(body, options: SpindleApiClient.JsonOptions) };
@@ -411,11 +431,17 @@ internal sealed class AgentLogs : IDisposable
         Copy(Path.Combine(fixtures, "claude"), Path.Combine(Home, ".claude"));
         Copy(Path.Combine(fixtures, "codex"), Path.Combine(Home, ".codex"));
         // The logs name these folders; each is a repository, as on the Mac that wrote them.
-        foreach (var name in new[] { "atlas", "beacon", "copper" }) Directory.CreateDirectory(Path.Combine("/tmp/spindle-activity-repos", name, ".git"));
+        foreach (var name in new[] { "atlas", "beacon", "copper" }) Directory.CreateDirectory(Path.Combine(Repository(name), ".git"));
         Environment.SetEnvironmentVariable("SPINDLE_AGENT_HOME", Home);
     }
 
     public string Home { get; }
+
+    /// <summary>
+    /// A repository the logs name, as this PC finds it: on Windows, <c>/tmp/spindle-activity-repos</c> is on the
+    /// current drive, so its identity has the drive in it.
+    /// </summary>
+    public static string Repository(string name) => Path.GetFullPath(Path.Combine("/tmp/spindle-activity-repos", name));
 
     /// <summary>The day the synthetic logs are on.</summary>
     public static DateOnly Day => new(2026, 9, 28);
@@ -433,7 +459,7 @@ internal sealed class AgentLogs : IDisposable
     public void Dispose()
     {
         Environment.SetEnvironmentVariable("SPINDLE_AGENT_HOME", previous);
-        Directory.Delete(Home, true);
+        ApiFixture.DeleteDirectory(Home);
     }
 }
 
@@ -497,7 +523,7 @@ internal static class TestData
         var meeting = new TagResponse { Id = Guid.NewGuid(), Name = "meeting" };
         fixture.Tags = [review, meeting];
         var zone = ApiFixture.Zagreb;
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).Date);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(TestClock.Now, zone).Date);
         DateTimeOffset At(int daysAgo, double hour)
         {
             var local = today.AddDays(-daysAgo).ToDateTime(TimeOnly.MinValue).AddHours(hour);
@@ -507,7 +533,7 @@ internal static class TestData
         {
             var start = At(daysAgo, from);
             var stop = At(daysAgo, to);
-            if (stop > DateTimeOffset.UtcNow) return;
+            if (stop > TestClock.Now) return;
             fixture.Entries.Add(new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = description, ProjectId = project?.Id, TaskId = task, IsBillable = project?.IsBillable ?? false,
@@ -532,7 +558,7 @@ internal static class TestData
             fixture.Entries.Add(new TimeEntryResponse
             {
                 Id = Guid.NewGuid(), WorkspaceId = fixture.Workspace, Description = "Review PR for the booking flow", ProjectId = projects[0].Id,
-                TaskId = projects[0].Tasks[0].Id, IsBillable = true, TagIds = [review.Id], Start = DateTimeOffset.UtcNow.AddMinutes(-47).AddSeconds(-12),
+                TaskId = projects[0].Tasks[0].Id, IsBillable = true, TagIds = [review.Id], Start = TestClock.Now.AddMinutes(-47).AddSeconds(-12),
             });
         }
     }

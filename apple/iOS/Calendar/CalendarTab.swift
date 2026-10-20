@@ -413,11 +413,16 @@ private struct EntryBlock: View {
         .shadow(color: .black.opacity(lifted ? 0.25 : 0), radius: 8, y: 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(entry.description.isEmpty ? "No description" : entry.description), "
-                + "\(parts.map { "split: \(tracker.catalog.describe($0))" } ?? project?.name ?? "no project"), "
-                + "\(tracker.time.clock(entry.start)) – \(entry.stop.map(tracker.time.clock) ?? "now")"
-                + (tracker.isLocked(entry.start) ? ", locked" : ""))
+        .accessibilityLabel(accessibilityLabel(entry, project: project, parts: parts))
         .accessibilityHint("Opens the entry; press and hold to move it")
+    }
+
+    /// In parts, so older compilers type-check it in time.
+    private func accessibilityLabel(_ entry: TimeEntry, project: Project?, parts: [SplitPart]?) -> String {
+        let description = entry.description.isEmpty ? "No description" : entry.description
+        let projects = parts.map { "split: \(tracker.catalog.describe($0))" } ?? project?.name ?? "no project"
+        let stop = entry.stop.map(tracker.time.clock) ?? "now"
+        let locked = tracker.isLocked(entry.start) ? ", locked" : ""
+        return "\(description), \(projects), \(tracker.time.clock(entry.start)) – \(stop)\(locked)"
     }
 }
