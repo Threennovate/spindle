@@ -463,6 +463,13 @@ public sealed class MainWindow : Window
         preferenceStore.Save(preferences);
     }
 
+    /// <summary>Keeps the ignore list, without anything else in the preferences changing.</summary>
+    public void SaveIgnoredRepositories(IgnoredList ignored)
+    {
+        preferences = preferences with { IgnoredRepositories = ignored };
+        preferenceStore.Save(preferences);
+    }
+
     /// <summary>Why a shortcut couldn't be set, e.g. another app holds it; shown in Settings.</summary>
     public string? ShortcutProblem { get; private set; }
 

@@ -15,6 +15,8 @@ struct ProjectPicker: View {
     var placeholder = "Search projects, tasks or clients"
     /// Offers to split the time between projects instead of choosing one.
     var onSplit: (() -> Void)?
+    /// Choosing a project for a repository: offers to ignore the repository instead, beside "No project".
+    var onIgnore: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(Notices.self) private var notices
@@ -27,6 +29,7 @@ struct ProjectPicker: View {
 
     enum Row: Identifiable, Equatable {
         case noProject
+        case ignore
         case agentsHeader
         /// A project agents are at work in now, with the task a branch rule names for that work.
         case agentsNow(Project, task: ProjectTask?)
@@ -42,6 +45,7 @@ struct ProjectPicker: View {
             switch self {
             case .split: "split"
             case .noProject: "none"
+            case .ignore: "ignore"
             case .agentsHeader: "agents"
             case .agentsNow(let project, let task): "agents:\(project.id):\(task?.id ?? "")"
             case .agentsEnd: "agents-end"
@@ -84,6 +88,9 @@ struct ProjectPicker: View {
         }
         if matches("No project") && !taken(nil, nil) {
             rows.append(.noProject)
+        }
+        if onIgnore != nil && matches("Ignore repository") {
+            rows.append(.ignore)
         }
         for group in tracker.catalog.projectGroups(keeping: projectId) {
             let clientName = group.client?.name ?? ""
@@ -183,6 +190,12 @@ struct ProjectPicker: View {
                 iconRow(Image(systemName: "folder.badge.minus"), Text("No project"))
                     .foregroundStyle(.secondary)
             }
+        case .ignore:
+            choice(row, checked: false) {
+                iconRow(Image(systemName: "eye.slash"), Text("Ignore repository"))
+                    .foregroundStyle(.secondary)
+            }
+            .help("Leave its agent work out of Spindle on all your devices: no suggestions, calendar or uploads")
         case .project(let project):
             choice(row, checked: project.id == projectId && taskId == nil && !choosingAnew) {
                 iconRow(ProjectDot(color: project.color), Text(project.name).lineLimit(1))
@@ -270,6 +283,9 @@ struct ProjectPicker: View {
         case .noProject:
             onChange(nil, nil)
             dismiss()
+        case .ignore:
+            dismiss()
+            onIgnore?()
         case .project(let project):
             onChange(project.id, nil)
             dismiss()

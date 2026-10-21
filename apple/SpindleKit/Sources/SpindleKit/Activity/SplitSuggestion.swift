@@ -397,6 +397,7 @@ public struct SplitSuggestion: Sendable, Equatable {
     /// prompts for the same target, in order.
     static func pieces(within range: DateInterval, activity: [ActivityDay], placing: (AttentionSegment) -> RepositoryLinks.Placement?) -> [Piece] {
         let segments = activity.flatMap(\.attention).sorted { $0.range.start < $1.range.start }
+        let ignored = activity.flatMap(\.ignored)
         let placed = withoutActuallyEscaping(placing) { placing in
             var targets = Targets(placing: placing)
             return segments.map { targets.of($0) }
@@ -407,10 +408,13 @@ public struct SplitSuggestion: Sendable, Equatable {
             if let overlap = segment.range.intersection(with: range), overlap.duration > 0 {
                 pieces.append(Piece(target: target, range: overlap, repository: segment.repository, taskId: taskId))
             }
-            // The time between two prompts for the same target is its; its task only when both name the same.
+            // The time between two prompts for the same target is its; its task only when both name the same. Not
+            // over an ignored repository's attention, which the person said is none of the target's.
             if index + 1 < segments.count, let next = placed[index + 1], next.target == target,
                segment.range.end < segments[index + 1].range.start,
-               let gap = DateInterval(start: segment.range.end, end: segments[index + 1].range.start).intersection(with: range),
+               case let between = DateInterval(start: segment.range.end, end: segments[index + 1].range.start),
+               !ignored.contains(where: { $0.start < between.end && $0.end > between.start }),
+               let gap = between.intersection(with: range),
                gap.duration > 0 {
                 pieces.append(Piece(target: target, range: gap, repository: segment.repository, taskId: next.taskId == taskId ? taskId : nil))
             }

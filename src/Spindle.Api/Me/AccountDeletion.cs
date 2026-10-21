@@ -179,6 +179,7 @@ internal sealed class AccountDeletion(AppDbContext db, SubscriptionBilling billi
         await db.AgentSessions.Where(s => s.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.AgentRepositoryLinks.Where(l => l.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.SplitSuggestionDismissals.Where(d => d.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await db.IgnoredRepositories.Where(i => i.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.AgentProposals.Where(p => p.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserPasskeys.Where(p => p.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserLogins.Where(l => l.UserId == userId).ExecuteDeleteAsync(cancellationToken);

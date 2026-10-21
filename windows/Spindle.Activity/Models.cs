@@ -11,4 +11,13 @@ public sealed record ActivitySnapshot(IReadOnlyList<LocalAgentSession> Sessions,
     IReadOnlyList<AttentionSegment> Attention, IReadOnlyList<AgentRun> Runs, IReadOnlyList<string> Errors)
 {
     public static ActivitySnapshot Empty { get; } = new([], [], [], []);
+
+    /// <summary>
+    /// Attention in repositories the person ignores, without a repository, as the server gets it: nothing shows it, but
+    /// it ends the attention before it, so suggestions read <see cref="Evidence"/>.
+    /// </summary>
+    public IReadOnlyList<AttentionSegment> Ignored { get; init; } = [];
+
+    /// <summary>The attention suggestions are worked out from: <see cref="Attention"/> and <see cref="Ignored"/>, in order.</summary>
+    public IReadOnlyList<AttentionSegment> Evidence => Ignored.Count == 0 ? Attention : [.. Attention.Concat(Ignored).OrderBy(a => a.Start)];
 }

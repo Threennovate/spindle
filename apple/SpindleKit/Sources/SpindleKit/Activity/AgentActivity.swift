@@ -120,6 +120,9 @@ public struct ActivityDay: Sendable {
     public var sessions: [AgentSession]
     public var totals: [ActivityRepository: ActivityTotals]
     public var parallel: TimeInterval
+    /// Attention in repositories the person ignores, which nothing shows: it only ends the attention before it, so no
+    /// other repository's time stretches over it.
+    public var ignored: [DateInterval] = []
     public var attentionTotal: TimeInterval { attention.reduce(0) { $0 + $1.range.duration } }
     public var hasActivity: Bool { !attention.isEmpty || !runs.isEmpty }
 
@@ -147,8 +150,11 @@ public enum ActivityTimeline {
     public static let idleCap: TimeInterval = 15 * 60
     public static let runGap: TimeInterval = 3 * 60
 
+    /// The day's timeline. Sessions in a repository `ignoring` names leave nothing but their prompts' place in it: they
+    /// end the attention before them, as anyone's prompts do, and their own attention is kept apart as `ignored`.
     public static func build(sessions: [AgentSession], day: DayKey, time: UserTime,
-                             repository: (String) -> ActivityRepository) -> ActivityDay {
+                             repository: (String) -> ActivityRepository,
+                             ignoring: (ActivityRepository) -> Bool = { _ in false }) -> ActivityDay {
         let bounds = DateInterval(start: time.start(of: day), end: time.start(of: time.adding(1, to: day)))
         let byID = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         func root(_ session: AgentSession) -> AgentSession {
@@ -160,6 +166,7 @@ public enum ActivityTimeline {
             return current
         }
         let repos = Dictionary(sessions.map { ($0.id, repository(root($0).cwd)) }, uniquingKeysWith: { first, _ in first })
+        let hidden = Set(Set(repos.values).filter(ignoring).map(\.key))
         func clip(_ start: Date, _ end: Date) -> DateInterval? {
             let a = max(start, bounds.start), b = min(end, bounds.end)
             return a < b ? DateInterval(start: a, end: b) : nil
@@ -186,6 +193,8 @@ public enum ActivityTimeline {
                                                   branches: on))
             }
         }
+        let ignored = attention.filter { hidden.contains($0.repository.key) }.map(\.range)
+        attention.removeAll { hidden.contains($0.repository.key) }
         var blocks: [DateInterval] = []
         for segment in attention {
             if let last = blocks.last, last.end == segment.range.start {
@@ -195,7 +204,7 @@ public enum ActivityTimeline {
         var runs: [AgentRun] = []
         for session in sessions {
             let events = session.events.sorted { $0.date < $1.date }
-            guard let first = events.first, let repo = repos[session.id] else { continue }
+            guard let first = events.first, let repo = repos[session.id], !hidden.contains(repo.key) else { continue }
             var start = first.date, end = first.date
             func appendRun() {
                 if let range = clip(start, end) {
@@ -227,8 +236,9 @@ public enum ActivityTimeline {
             if active[key] == 0 { active.removeValue(forKey: key) }
             previous = date
         }
-        return ActivityDay(day: day, attention: attention, blocks: blocks, runs: runs, sessions: sessions,
-                           totals: totals, parallel: parallel)
+        return ActivityDay(day: day, attention: attention, blocks: blocks, runs: runs,
+                           sessions: sessions.filter { repos[$0.id].map { !hidden.contains($0.key) } ?? true },
+                           totals: totals, parallel: parallel, ignored: ignored)
     }
 }
 

@@ -107,7 +107,8 @@ struct CalendarView: View {
             defer { if !Task.isCancelled { loadingActivity = false } }
             do {
                 let loaded = try await Performance.measure("Calendar activity") {
-                    try await AgentActivityLoader.shared.load(days: request.days, time: time, sources: request.sources, fixtureRoot: ActivitySnapshot.root)
+                    try await AgentActivityLoader.shared.load(days: request.days, time: time, sources: request.sources, ignoring: context.ignoring,
+                                                              fixtureRoot: ActivitySnapshot.root)
                 }
                 try Task.checkCancellation()
                 guard request == activityRequest, context == desktop.splits.context(time: tracker.time) else { return }

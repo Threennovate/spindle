@@ -31,12 +31,20 @@ public sealed record AgentSessionUpload(string Source, string SessionId, string?
 
     /// <summary>
     /// What a session says to the server: touches as timestamps, every other event only as runs, the title only when
-    /// allowed. Null when there is nothing to say, or the server would not take its ID.
+    /// allowed. Null when there is nothing to say, or the server would not take its ID. A session in a repository the
+    /// person ignores (<paramref name="ignored"/>) says only when its prompts were sent, which still end the attention
+    /// before them, as a folder outside git's do; a subagent's says nothing.
     /// </summary>
-    public static AgentSessionUpload? Create(LocalAgentSession session, AgentRepository? repository, bool titles)
+    public static AgentSessionUpload? Create(LocalAgentSession session, AgentRepository? repository, bool titles, bool ignored = false)
     {
         if (session.Id.Length is 0 or > SessionIdMaxLength || session.Events.Count == 0) return null;
         var events = session.Events.OrderBy(e => e.At).ToArray();
+        if (ignored)
+        {
+            var touches = session.ParentId is null ? events.Where(e => e.IsTouch).Select(e => e.At).ToArray() : [];
+            return touches.Length == 0 ? null
+                : new(AgentLogFormat.Of(session.Source).Id, session.Id, null, null, null, [], touches, [], AgentLogParser.Version);
+        }
         var runs = new List<UploadRun>();
         long start = events[0].At, end = start;
         foreach (var item in events.Skip(1))
@@ -108,6 +116,8 @@ public sealed class AgentActivityUploader(string? file)
         public DateTimeOffset? ScannedAt { get; set; }
         /// <summary>The sources read (their ids); null in state written before there were more than Claude Code and Codex.</summary>
         public List<string>? Sources { get; set; }
+        /// <summary>The hashes of the repositories ignored then; null in state from before there was an ignore list.</summary>
+        public List<string>? Ignored { get; set; }
         public Dictionary<string, string> Sent { get; set; } = [];
     }
 
@@ -126,13 +136,15 @@ public sealed class AgentActivityUploader(string? file)
     /// <paramref name="read"/> reads whole sessions with events since a moment, from the logs written since another, if
     /// given; <paramref name="send"/> uploads a batch and throws <see cref="AgentActivityUploadRejected"/> when the
     /// server refuses it as invalid. Then the batch's sessions go one at a time: a session still refused counts as
-    /// handled until it changes, so one bad session never holds up the ones after it.
+    /// handled until it changes, so one bad session never holds up the ones after it. Sessions in repositories
+    /// <paramref name="ignoring"/> names go as their prompts' times alone.
     /// </summary>
     public async Task<AgentUploadResult> UploadAsync(DateTimeOffset syncedSince, bool titles, DateTimeOffset now,
         Func<DateTimeOffset, DateTimeOffset?, CancellationToken, Task<IReadOnlyList<(LocalAgentSession Session, AgentRepository? Repository)>>> read,
         Func<IReadOnlyList<AgentSessionUpload>, CancellationToken, Task> send, CancellationToken cancellationToken = default,
-        IReadOnlySet<AgentSource>? sources = null)
+        IReadOnlySet<AgentSource>? sources = null, IgnoredRepositories? ignoring = null)
     {
+        ignoring ??= IgnoredRepositories.None;
         if (state.SyncedSince != syncedSince || state.Titles != titles || state.ParserVersion != AgentLogParser.Version)
             state = new State { SyncedSince = syncedSince, Titles = titles };
         // A source turned on (or added by an update) has sessions older than the last look; the ones already sent are
@@ -140,15 +152,26 @@ public sealed class AgentActivityUploader(string? file)
         var reading = (sources ?? AgentLogFormat.All.Select(f => f.Source).ToHashSet()).Select(s => AgentLogFormat.Of(s).Id).Order(StringComparer.Ordinal).ToList();
         if (!reading.All((state.Sources ?? ["claude", "codex"]).Contains)) state.ScannedAt = null;
         state.Sources = reading;
+        // A repository ignored or no longer ignored since changes sessions older than the last look.
+        var ignored = ignoring.Hashes.Order(StringComparer.Ordinal).ToList();
+        if (!(state.Ignored ?? []).SequenceEqual(ignored)) state.ScannedAt = null;
+        state.Ignored = ignored;
         state.HistoryStart ??= now - History;
         var from = new[] { state.HistoryStart.Value, now - Retention }.Max();
         // A minute's overlap, for logs written while the last look was under way.
-        var changed = (await read(from, state.ScannedAt?.AddMinutes(-1), cancellationToken))
-            .Select(s => AgentSessionUpload.Create(s.Session, s.Repository, titles))
+        var known = new Dictionary<string, bool>(StringComparer.Ordinal);
+        var uploads = (await read(from, state.ScannedAt?.AddMinutes(-1), cancellationToken))
+            .Select(s => (s.Session.Id, Upload: AgentSessionUpload.Create(s.Session, s.Repository, titles, s.Repository is { } repository
+                && (known.TryGetValue(repository.Identity, out var hit) ? hit : known[repository.Identity] = ignoring.Contains(repository)))))
+            .ToArray();
+        // A session with nothing to say isn't sent. One that was (before its repository was ignored, after which the
+        // server deleted it) has to be sent again once it says something.
+        foreach (var (id, _) in uploads.Where(u => u.Upload is null)) state.Sent.Remove(id);
+        var changed = uploads.Select(u => u.Upload)
             .OfType<AgentSessionUpload>()
             .Select(upload => (Upload: upload, Fingerprint: upload.Fingerprint))
             .Where(s => !state.Sent.TryGetValue(s.Upload.SessionId, out var sent) || sent != s.Fingerprint)
-            .OrderBy(s => s.Upload.Runs[0].Start)
+            .OrderBy(s => s.Upload.Runs.Count > 0 ? s.Upload.Runs[0].Start : s.Upload.Touches[0])
             .ToArray();
         int sentCount = 0, rejected = 0;
         foreach (var batch in changed.Chunk(BatchSize))

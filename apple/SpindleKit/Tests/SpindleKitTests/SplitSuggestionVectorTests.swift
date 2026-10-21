@@ -69,6 +69,7 @@ import Testing
         let learned: [String: String]?
         let noProject: [String]?
         let rules: [String: [Rule]]?
+        let ignored: [String]?
         let sessions: [Session]
         let entry: Entry
         let expected: Expected?
@@ -127,11 +128,20 @@ import Testing
         })
     }
 
-    /// Each day's timeline, as the Mac's loader builds it.
-    static func days(_ sessions: [Session], from start: Date, to end: Date) -> [ActivityDay] {
+    /// Each day's timeline, as the Mac's loader builds it, with these repositories on the ignore list.
+    static func days(_ sessions: [Session], from start: Date, to end: Date, ignored: [String]? = nil) -> [ActivityDay] {
         let (parsed, repository) = Self.sessions(sessions)
         let days = Set([time.day(of: start), time.day(of: end)])
-        return days.sorted().map { ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository) }
+        let ignoring = Self.ignoring(ignored)
+        return days.sorted().map { ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository, ignoring: ignoring.contains) }
+    }
+
+    /// The ignore list as it syncs, for an account of the tests.
+    static func ignoring(_ keys: [String]?) -> IgnoredRepositories {
+        let account = "0c000000-0000-4000-8000-000000000001"
+        return IgnoredRepositories(account: account, hashes: Set((keys ?? []).map {
+            IgnoredRepositories.hash(vectors.repositories[$0]!.identity!, account: account)
+        }))
     }
 
     static func links(_ keys: [String: String]?) -> [String: String] {
@@ -163,7 +173,7 @@ import Testing
         let matcher = links.matcher(among: Self.projects)
 
         let suggestion = SplitSuggestion.suggest(
-            from: start, to: stop, activity: Self.days(vector.sessions, from: start, to: stop),
+            from: start, to: stop, activity: Self.days(vector.sessions, from: start, to: stop, ignored: vector.ignored),
             fallback: Self.vectors.projects[vector.entry.project]!.id, placing: matcher.place)
 
         guard let expected = vector.expected else {

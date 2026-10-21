@@ -57,6 +57,41 @@ public sealed record DesktopPreferences
     public string? ReviewCardDismissed { get; init; }
     /// <summary>The working day whose review the end-of-day notification offered already.</summary>
     public string? DayReviewOffered { get; init; }
+    /// <summary>The repositories the person ignores, kept here so the logs read leave them out offline too.</summary>
+    public IgnoredList IgnoredRepositories { get; init; } = new();
+}
+
+/// <summary>
+/// The repositories a person ignores, as hashes of their identities for <see cref="Account"/>, with their names as this
+/// PC knew them and what was changed here that the account doesn't have yet.
+/// </summary>
+public sealed record IgnoredList
+{
+    public string? Account { get; init; }
+    public KeptList Hashes { get; init; } = [];
+    /// <summary>Names by hash; the account has the hashes alone.</summary>
+    public KeptMap<string> Names { get; init; } = [];
+    /// <summary>Ignored (true) or no longer ignored (false) here, not sent yet, by hash.</summary>
+    public KeptMap<bool> Unsent { get; init; } = [];
+}
+
+/// <summary>Values by key, kept on this PC, equal by content so preferences stay comparable as values.</summary>
+public sealed class KeptMap<TValue> : Dictionary<string, TValue>
+{
+    public KeptMap() { }
+
+    public KeptMap(IEnumerable<KeyValuePair<string, TValue>> values) : base(values) { }
+
+    /// <summary>This map with <paramref name="key"/> set to <paramref name="value"/>.</summary>
+    public KeptMap<TValue> With(string key, TValue value) => new(this.Where(v => v.Key != key).Append(new(key, value)));
+
+    /// <summary>This map without <paramref name="key"/>.</summary>
+    public KeptMap<TValue> Without(string key) => ContainsKey(key) ? new(this.Where(v => v.Key != key)) : this;
+
+    public override bool Equals(object? obj) =>
+        obj is KeptMap<TValue> other && Count == other.Count && this.All(v => other.TryGetValue(v.Key, out var value) && Equals(value, v.Value));
+
+    public override int GetHashCode() => Count;
 }
 
 /// <summary>Keys kept on this PC, the newest last, equal by content so preferences stay comparable as values.</summary>

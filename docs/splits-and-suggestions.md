@@ -100,7 +100,7 @@ The Windows app reads the same logs with the same rules in `windows/Spindle.Acti
   the wait signpost makes any remaining cost visible in a real-data profile.
 - Repositories resolve to their git root; worktrees merge into their main repository. Folders outside git don't count.
   Away from the Mac a repository is named by its identity (`RepositoryIdentity`): its normalised git origin without
-  credentials, or a hash of its path.
+  credentials, or a hash of its path. Right after that, repositories the person ignores are left out (below).
 - `ActivityTimeline` builds a day: attention segments (each touch to the next touch anywhere, at most 15 min), focus
   blocks, and agent runs (events within 3 min). Attention is sequential; runs may overlap but are not used for splits.
   A segment carries the branches of its sessions; one repository's attention joins across prompts only while the
@@ -118,7 +118,8 @@ The Windows app reads the same logs with the same rules in `windows/Spindle.Acti
   repository (`RepositoryLinks`, by identity; `Matcher.place` reads a segment's branches, `project(for:)` doesn't).
   A repository the person set to **No project** has none: neither a learned link nor a name takes its work, and it is
   named as itself (`RepositoryLinks.noProject`, vector "a repository the person set to no project…").
-- Time between two consecutive prompts for the same project goes to it however long it was.
+- Time between two consecutive prompts for the same project goes to it however long it was, unless a folder outside git
+  or an ignored repository had attention between them.
 - Time the logs don't account for stays on the timer's project.
 - Parts under 10% are dropped; under 10 min of evidence suggests nothing.
 - When the work moved from project to project (each project's time in one place, detours under 10 min ignored), it
@@ -172,6 +173,59 @@ the parameter they are left out, so apps that predate them don't stumble on a nu
 - **Windows:** the same places (`RepositoryLinkButton`, `BranchRulesEditor` "Unlink Repository",
   `SplitAdvisor.UnlinkAsync`/`ChooseAsync`).
 - **The web:** "No project" in the picker for a repository in a suggestion, with Undo.
+
+### Ignoring a repository
+
+Some work is none of Spindle's business. **Ignore Repository** leaves a repository out of everything: its prompts and
+runs show in no calendar lane, suggestion, split drift, untracked stretch ("Time nobody tracked"), "Agents now", the
+onboarding's link step or the day's review, nor in Linked repositories, and nothing of it is uploaded. It differs from
+**No project**, which says "this is work, just not for a project" and keeps showing.
+
+- **Attention boundaries stay.** An ignored repository's prompts still end the attention before them, so another
+  repository's segment never stretches over private work, and the time between two prompts for one project isn't that
+  project's when ignored attention lies between them. The ignored attention itself is time the logs don't account for,
+  so it stays on the timer's project, as a folder outside git's does (vectors "an ignored repository's prompts count
+  for nothing…" and "…never a part…" in `split-suggestions.json`, and cases in `untracked-activity.json` and
+  `split-drift.json`). An untracked stretch can still join pieces of other work across it, as it joins any pieces
+  within 20 minutes.
+- **Filtered when read, as early as possible.** The Kit's `ActivityTimeline.build` takes the list right after each
+  folder resolves to its repository and identity: an ignored repository's sessions and runs go, and its attention is
+  kept apart as `ActivityDay.ignored`, which only `SplitSuggestion.pieces` reads (`AgentActivityLoader.load(ignoring:)`;
+  the Mac's `SplitAdvisor` context includes the list, so the days read with another list are read again). Windows does
+  the same in `AgentActivityService` (`Ignoring`): `ActivitySnapshot.Attention` leaves it out, `Ignored` has its
+  attention without a repository, and suggestions and drift read `Evidence`, both together
+  (`AttentionTimeline.Build(…, ignored)`). The logs and the ledger are never changed, so taking a repository off the
+  list brings its history back.
+- **Uploads** (with activity sync on) send an ignored repository's sessions as their prompts' times alone: no
+  repository, name, origin, branches, title or runs, and no parent; a subagent's session isn't sent at all. The upload
+  format already takes sessions without a repository (a folder outside git), so older servers take them too, and the
+  server's timeline gets the same boundary without anything that identifies the repository. What still goes is the
+  agent's own random session ID and which agent it was, so a later upload of the same session replaces it. The
+  uploader reads its whole history again whenever the list changes, so a repository no longer ignored is sent again,
+  and a session that has nothing left to say forgets that it was sent (`ActivityUploader`, `AgentActivityUploader`).
+- **The list syncs as hashes.** Each repository is named by HMAC-SHA256 with the person's account ID (lower case, with
+  hyphens) as the key, over its `RepositoryIdentity`, in lower-case hex (`IgnoredRepositories.hash` in the Kit,
+  `IgnoredRepositories.Hash` on Windows, `IgnoredRepository.HashOf` on the server, all checked by
+  `tests/vectors/ignored-repositories.json`). `GET /api/me/agent-activity/ignored` lists the hashes,
+  `PUT …/ignored/{hash}` adds one and `DELETE …/ignored/{hash}` removes it, each reaching the other devices through
+  live sync (topic `agentActivity`). The server keeps the hash alone (`IgnoredRepositories`); it can test a guessed
+  repository against it, but holds no name, origin or path. Adding one deletes the sessions every device uploaded for
+  it and its link, found by hashing the identities the server holds; an upload from a device that hasn't heard yet
+  keeps only the prompts' times, and a link for it isn't kept. The data export lists the hashes, and deleting the
+  account deletes them.
+- **Mac:** "Ignore Repository" in a linked repository's context menu in Settings › General › Linked repositories,
+  "Ignore repository" in the project picker for a repository (in Settings, a suggestion and the day's review), and in
+  the onboarding's link step. It says "Ignored atlas" with Undo, which stops ignoring it and puts back its project and
+  rules. Settings › General › Ignored repositories lists them, with Stop Ignoring. The list, the names this Mac knew
+  (by hash) and changes not yet sent are kept in `UserDefaults` (`ignoredRepositories`, `ignoredRepositoryNames`,
+  `unsentIgnoredRepositories`); a hash from another device is named from the links and activity this Mac knows, or
+  shows as "A repository ignored on another device". Ignores are sent before links, so a link chosen after Undo is
+  kept.
+- **Windows:** the same places (`RepositoryLinkButton.IgnoreAsync`, `ProjectPicker`'s `onIgnore`, Settings › General
+  › Parallel work › Ignored repositories, the onboarding's "Ignore repository"), kept in the preferences file
+  (`IgnoredRepositories`).
+- **The web** needs nothing: it never sees an ignored repository.
+- Ignoring whole folders, e.g. `~/Private`, isn't possible yet.
 
 ### How sure a suggestion is
 
@@ -449,13 +503,15 @@ Windows `ActivitySync` (`windows/Spindle.Windows/Model`), `AgentActivityUploader
 (`windows/Spindle.Activity`) and `RepositoryResolver.OriginIdentity`.
 
 - **Always**, whether or not activity syncs: the projects chosen for repositories (`AgentRepositoryLinks`, by identity,
-  with their branch rules) and the entries kept as they are (`SplitSuggestionDismissals`) live with the account, so every device and the web agree.
+  with their branch rules), the entries kept as they are (`SplitSuggestionDismissals`) and the repositories ignored, as
+  hashes (`IgnoredRepositories`, above), live with the account, so every device and the web agree.
   A change reaches the other devices through live sync (topic `agentActivity`).
 - **Only with activity sync on** (`AppUser.AgentActivitySync`, an account setting, off by default): each Mac and
   Windows PC uploads its sessions to `PUT /api/me/agent-activity/sessions`, one row per session and device (`AgentSessions`), replaced
   whole: prompts as Unix milliseconds, runs as intervals, repository identity and name, branches, and titles only with
   `AgentActivityTitles`. Sessions outside git go without a repository: their prompts end the attention before them and
-  the time between two prompts, so leaving them out would change the split. Turning sync off deletes every session;
+  the time between two prompts, so leaving them out would change the split. Sessions in ignored repositories go the
+  same way, as their prompts' times alone. Turning sync off deletes every session;
   turning titles off deletes the titles; account deletion deletes all of it; the data export includes it.
 - **Windows uploads like the Mac**, so people who only use Windows get the same evidence on the web and through the
   server's MCP. It reads the same logs with its own parser (`windows/Spindle.Activity`) and follows the Mac's rules for
@@ -557,12 +613,12 @@ they can only describe those.
 ## Checking it
 
 - Kit: `swift test --package-path apple/SpindleKit` (parser parity, ledger, timeline windowing, suggestions, the
-  shared vectors, repository identities, uploads). With `SPINDLE_API_URL` set, `LiveAgentActivityTests` sends links,
+  shared vectors, repository identities, ignored repositories, uploads). With `SPINDLE_API_URL` set, `LiveAgentActivityTests` sends links,
   dismissals and an upload to a real API.
-- Server: `dotnet test` (`SplitSuggestionVectorTests`, `AgentActivityTests`).
+- Server: `dotnet test` (`SplitSuggestionVectorTests`, `IgnoredRepositoryVectorTests`, `AgentActivityTests`).
 - Mac: `xcodebuild test -project apple/Spindle.xcodeproj -scheme SpindleMac CODE_SIGNING_ALLOWED=NO`.
 - Windows: `dotnet run --project windows/Spindle.Activity.Tests` (the shared vectors: suggestions, `split-drift.json`,
-  `untracked-activity.json`) and `dotnet run --project windows/Spindle.Windows.Tests` (the views, with
+  `untracked-activity.json`, `ignored-repositories.json`) and `dotnet run --project windows/Spindle.Windows.Tests` (the views, with
   `SPINDLE_UI_PREVIEW` to draw them).
 - Web: `npm test` in `src/web` (`review.test.ts` and the suggestion views).
 - `scripts/check.sh all` runs all of them.

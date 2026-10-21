@@ -77,6 +77,24 @@ public static class AttentionTimeline
 
         return attention;
     }
+
+    /// <summary>Stands for every ignored repository while the timeline is built, so its attention is told apart.</summary>
+    private static readonly AgentRepository Hidden = new("ignored:", "");
+
+    /// <summary>
+    /// The attention, as <see cref="Build(IEnumerable{AgentTouch}, long, long)"/>, with that of repositories
+    /// <paramref name="ignored"/> names kept apart, without a repository and its prompts, as the server gets it: it shows
+    /// nowhere, but it ends the attention before it, so suggestions read both (<see cref="ActivitySnapshot.Evidence"/>).
+    /// </summary>
+    public static (List<AttentionSegment> Attention, List<AttentionSegment> Ignored) Build(
+        IEnumerable<AgentTouch> touches, long from, long to, Func<AgentRepository, bool> ignored)
+    {
+        var known = new Dictionary<AgentRepository, bool>();
+        var attention = Build(touches.Select(t => t.Repository is { } repository
+            && (known.TryGetValue(repository, out var hit) ? hit : known[repository] = ignored(repository)) ? t with { Repository = Hidden, Branches = null } : t), from, to);
+        return (attention.Where(a => a.Repository != Hidden).ToList(),
+            attention.Where(a => a.Repository == Hidden).Select(a => a with { Repository = null, Prompts = [] }).ToList());
+    }
 }
 
 /// <summary>A project the suggestion may name: active (not archived) and visible to the person.</summary>

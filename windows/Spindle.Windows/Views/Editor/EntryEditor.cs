@@ -755,7 +755,12 @@ public sealed class SuggestionBanner : UserControl
                     if (project is { } chosen) await owner.Splits.LinkAsync(repository, chosen);
                     else await RepositoryLinkButton.UnlinkAsync(owner, repository);
                     refresh();
-                }, choosingAnew: true, placeholder: $"Which project is {repository.Name} for?"));
+                }, choosingAnew: true, placeholder: $"Which project is {repository.Name} for?",
+                onIgnore: async () =>
+                {
+                    await RepositoryLinkButton.IgnoreAsync(owner, repository);
+                    refresh();
+                }));
                 label.Children.Add(link);
             }
             else if (part.Repositories.FirstOrDefault() is { } linked)

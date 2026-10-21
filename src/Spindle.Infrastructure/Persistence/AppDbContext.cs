@@ -87,6 +87,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : Ident
 
     public DbSet<SplitSuggestionDismissal> SplitSuggestionDismissals => Set<SplitSuggestionDismissal>();
 
+    public DbSet<IgnoredRepository> IgnoredRepositories => Set<IgnoredRepository>();
+
     public DbSet<AgentProposal> AgentProposals => Set<AgentProposal>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

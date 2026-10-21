@@ -281,6 +281,23 @@ namespace Spindle.Infrastructure.Persistence.Migrations
                     b.ToTable("AgentSessions");
                 });
 
+            modelBuilder.Entity("Spindle.Domain.AgentActivity.IgnoredRepository", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "Hash");
+
+                    b.ToTable("IgnoredRepositories");
+                });
+
             modelBuilder.Entity("Spindle.Domain.AgentActivity.SplitSuggestionDismissal", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -1949,6 +1966,15 @@ namespace Spindle.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Spindle.Domain.AgentActivity.AgentSession", b =>
+                {
+                    b.HasOne("Spindle.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Spindle.Domain.AgentActivity.IgnoredRepository", b =>
                 {
                     b.HasOne("Spindle.Infrastructure.Identity.AppUser", null)
                         .WithMany()

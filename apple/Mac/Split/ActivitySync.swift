@@ -57,7 +57,8 @@ final class ActivitySync {
 
     /// Called every few seconds with the agents' revision: sends and reads what is due.
     func tick(revision: Int) {
-        guard model.phase == .signedIn, model.me != nil, ActivitySnapshot.root == nil, !working else { return }
+        guard model.phase == .signedIn, let me = model.me, ActivitySnapshot.root == nil, !working else { return }
+        if splits.account != me.id { splits.account = me.id }
         let now = Date()
         if wasSyncing == true && !isSyncing {
             // Turned off, here or elsewhere: the server deleted what was sent, so it all goes again next time.
@@ -65,7 +66,7 @@ final class ActivitySync {
         }
         wasSyncing = isSyncing
         let pull = splits.isEnabled && (model.agentActivityRevision != pulledRevision || now.timeIntervalSince(lastPull) > Self.pullInterval
-            || !splits.unsentLinks.isEmpty || !splits.unsentDismissals.isEmpty)
+            || !splits.unsentLinks.isEmpty || !splits.unsentDismissals.isEmpty || !splits.unsentIgnores.isEmpty)
         let sinceUpload = now.timeIntervalSince(lastUpload)
         let upload = isSyncing && splits.isEnabled && !settings.activitySources.isEmpty
             && ((uploadWanted || revision != uploadedRevision) && sinceUpload > Self.uploadInterval || sinceUpload > Self.quietUploadInterval)
@@ -94,6 +95,13 @@ final class ActivitySync {
         let client = model.client
         let tracker = model.tracker
         let revision = model.agentActivityRevision
+        // First, so a link chosen after a repository was no longer ignored is kept.
+        for (hash, ignored) in splits.unsentIgnores {
+            do {
+                if ignored { try await client.ignoreRepository(hash: hash) } else { try await client.unignoreRepository(hash: hash) }
+                splits.sent(ignore: hash, ignored)
+            } catch {}
+        }
         for (identity, link) in splits.unsentLinks {
             // A link goes through a workspace that has the project; one of another workspace waits until it is open.
             // No project goes through any.
@@ -116,6 +124,11 @@ final class ActivitySync {
             } catch {}
         }
         do {
+            do {
+                splits.absorb(ignored: try await client.ignoredRepositories())
+            } catch let error as APIError where error.status == 404 {
+                // A server from before ignored repositories: the list stays on this Mac, links still come.
+            }
             let links = try await client.repositoryLinks()
             splits.absorb(links)
             splits.absorb(dismissals: try await client.dismissedSplitSuggestions())
@@ -130,21 +143,21 @@ final class ActivitySync {
 
     private func upload(revision: Int) async {
         guard let account = model.me?.agentActivity, account.sync, let since = account.syncedSince else { return }
-        let client = model.client, device = deviceId, sources = settings.activitySources
+        let client = model.client, device = deviceId, sources = settings.activitySources, ignoring = splits.ignoring
         let accountId = model.me?.id
         uploadWanted = false
         do {
             let result = try await uploader.upload(
-                syncedSince: since, titles: account.titles, sources: sources,
+                syncedSince: since, titles: account.titles, sources: sources, ignoring: ignoring,
                 sessions: { since in
                     let sessions = try await AgentActivityLoader.shared.sessions(since: since, sources: sources)
                     try await self.requireCurrentUpload(accountId: accountId, syncedSince: account.syncedSince,
-                                                        titles: account.titles, sources: sources)
+                                                        titles: account.titles, sources: sources, ignoring: ignoring)
                     return sessions
                 },
                 send: { batch in
                     try await self.requireCurrentUpload(accountId: accountId, syncedSince: account.syncedSince,
-                                                        titles: account.titles, sources: sources)
+                                                        titles: account.titles, sources: sources, ignoring: ignoring)
                     do {
                         try await client.uploadAgentSessions(batch, device: device)
                     } catch let error as APIError where error.status == 400 {
@@ -166,11 +179,12 @@ final class ActivitySync {
         lastUpload = Date()
     }
 
-    /// An upload that was read under old consent, sources or account settings is no longer wanted.
-    private func requireCurrentUpload(accountId: String?, syncedSince: Date?, titles: Bool, sources: Set<AgentSource>) throws {
+    /// An upload that was read under old consent, sources, account settings or ignore list is no longer wanted.
+    private func requireCurrentUpload(accountId: String?, syncedSince: Date?, titles: Bool, sources: Set<AgentSource>,
+                                      ignoring: IgnoredRepositories) throws {
         guard model.me?.id == accountId, let current = model.me?.agentActivity, current.sync,
               current.syncedSince == syncedSince, current.titles == titles,
-              splits.isEnabled, settings.activitySources == sources else { throw CancellationError() }
+              splits.isEnabled, settings.activitySources == sources, splits.ignoring == ignoring else { throw CancellationError() }
     }
 
 }

@@ -37,8 +37,9 @@ internal static class DataExport
         DateTimeOffset? Stop,
         IReadOnlyList<Share> Split);
 
-    /// <summary>What the person's Macs uploaded from agent logs, if they turned that on, and the projects they chose for repositories.</summary>
-    public sealed record AgentActivityData(bool Sync, bool Titles, IReadOnlyList<RepositoryLink> RepositoryLinks, IReadOnlyList<AgentSessionData> Sessions);
+    /// <summary>What the person's Macs uploaded from agent logs, if they turned that on, the projects they chose for repositories, and the hashes of those they ignore.</summary>
+    public sealed record AgentActivityData(
+        bool Sync, bool Titles, IReadOnlyList<RepositoryLink> RepositoryLinks, IReadOnlyList<AgentSessionData> Sessions, IReadOnlyList<string> IgnoredRepositories);
 
     public sealed record RepositoryLink(string Repository, string Identity, string? Project, IReadOnlyList<BranchRuleData> BranchRules);
 
@@ -102,6 +103,12 @@ internal static class DataExport
             .Where(s => s.UserId == user.Id)
             .OrderBy(s => s.FirstAt)
             .ToListAsync(cancellationToken);
+        // Hashes alone: the server never knew which repositories they are.
+        var ignored = await db.IgnoredRepositories.AsNoTracking()
+            .Where(i => i.UserId == user.Id)
+            .OrderBy(i => i.CreatedAt)
+            .Select(i => i.Hash)
+            .ToListAsync(cancellationToken);
 
         return new Export(
             now,
@@ -143,6 +150,7 @@ internal static class DataExport
                     s.Branches,
                     s.Touches.Select(DateTimeOffset.FromUnixTimeMilliseconds).ToList(),
                     s.RunStarts.Zip(s.RunEnds, (start, end) => new AgentRun(DateTimeOffset.FromUnixTimeMilliseconds(start), DateTimeOffset.FromUnixTimeMilliseconds(end))).ToList()))
-                    .ToList()));
+                    .ToList(),
+                ignored));
     }
 }

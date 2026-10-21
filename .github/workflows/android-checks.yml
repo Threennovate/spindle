@@ -22,6 +22,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for `tools`, which the runner's command-line tools no longer have.
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Check generated API models
         run: |

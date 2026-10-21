@@ -98,7 +98,14 @@ public sealed partial class SplitAdvisor
             accountFor = owner.WorkspaceId;
             try
             {
-                Absorb((await api.GetRepositoryLinksAsync()).Where(l => l.WorkspaceId == owner.WorkspaceId).ToList());
+                await SendIgnoredAsync();
+                try { AbsorbIgnored(await api.GetIgnoredRepositoriesAsync()); }
+                catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // A server from before ignored repositories: the list stays on this PC, links still come.
+                }
+                var ignoring = Ignoring;
+                Absorb((await api.GetRepositoryLinksAsync()).Where(l => l.WorkspaceId == owner.WorkspaceId && !ignoring.Contains(l.Identity)).ToList());
                 foreach (var id in await api.GetSplitSuggestionDismissalsAsync()) dismissed.Add(id);
                 await SendUnsentAsync();
             }
@@ -108,6 +115,7 @@ public sealed partial class SplitAdvisor
             }
             changed = true;
         }
+        ReadWithIgnoring();
         var today = owner.Time.Today();
         foreach (var day in wanted.Distinct())
         {
@@ -159,7 +167,7 @@ public sealed partial class SplitAdvisor
         for (var day = first; day <= last; day = day.AddDays(1))
         {
             if (!days.TryGetValue(day, out var read)) return null;
-            segments.AddRange(read.Snapshot.Attention);
+            segments.AddRange(read.Snapshot.Evidence);
         }
         var projects = Linkable();
         var links = Links();
@@ -239,7 +247,7 @@ public sealed partial class SplitAdvisor
         for (var day = owner.Time.Day(entry.Start); day <= owner.Time.Day(end); day = day.AddDays(1))
         {
             if (!days.TryGetValue(day, out var read)) return null;
-            segments.AddRange(read.Snapshot.Attention);
+            segments.AddRange(read.Snapshot.Evidence);
         }
         var projects = Linkable();
         var links = Links();

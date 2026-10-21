@@ -121,12 +121,13 @@ public sealed class ActivitySync
     {
         var device = Device();
         var sources = owner.AgentSources;
+        var ignoring = owner.Splits.Ignoring;
         reader.Sources = sources;
-        // Consent, sources or account settings that changed while reading or sending make the upload obsolete.
+        // Consent, sources, account settings or the ignore list that changed while reading or sending make the upload obsolete.
         void RequireCurrent()
         {
             if (owner.Me?.Id != accountId || !owner.AgentLogsEnabled || !owner.AgentSources.SetEquals(sources) || Account is not { Sync: true } current
-                || current.SyncedSince != since || current.Titles != titles) throw new OperationCanceledException();
+                || current.SyncedSince != since || current.Titles != titles || !owner.Splits.Ignoring.Equals(ignoring)) throw new OperationCanceledException();
         }
         lastUpload = now;
         try
@@ -150,7 +151,7 @@ public sealed class ActivitySync
                     {
                         throw new AgentActivityUploadRejected("The server refused the sessions.");
                     }
-                }, sources: sources);
+                }, sources: sources, ignoring: ignoring);
             Problem = result.Rejected > 0 ? "Some sessions couldn't be uploaded: the server refused them." : null;
         }
         catch (OperationCanceledException)

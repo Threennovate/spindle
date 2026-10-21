@@ -38,6 +38,7 @@ public actor AgentActivityLoader {
         /// Each source's logs folder, so fixture roots don't share days.
         let folders: [String]
         let sources: Set<AgentSource>
+        let ignoring: IgnoredRepositories
     }
     private struct Completed {
         let files: [ActivityFileInventory.File]
@@ -98,13 +99,15 @@ public actor AgentActivityLoader {
     }
 
     /// Wait measures only queueing before the interactive work starts, separately from parsing and timelines.
-    public nonisolated func load(days: [DayKey], time: UserTime, sources: Set<AgentSource>,
+    /// Repositories `ignoring` names leave only their prompts' place in the days (`ActivityTimeline.build`).
+    public nonisolated func load(days: [DayKey], time: UserTime, sources: Set<AgentSource>, ignoring: IgnoredRepositories = .none,
                                  home: URL = URL(fileURLWithPath: NSHomeDirectory()), fixtureRoot: URL? = nil) async throws -> [ActivityDay] {
         let wait = Performance.signposter.beginInterval("Activity wait", id: Performance.signposter.makeSignpostID())
-        return try await loadStarted(days: days, time: time, sources: sources, home: home, fixtureRoot: fixtureRoot, wait: wait)
+        return try await loadStarted(days: days, time: time, sources: sources, ignoring: ignoring, home: home, fixtureRoot: fixtureRoot,
+                                     wait: wait)
     }
 
-    private func loadStarted(days: [DayKey], time: UserTime, sources: Set<AgentSource>,
+    private func loadStarted(days: [DayKey], time: UserTime, sources: Set<AgentSource>, ignoring: IgnoredRepositories,
                      home: URL = URL(fileURLWithPath: NSHomeDirectory()),
                      fixtureRoot: URL? = nil, wait: OSSignpostIntervalState) async throws -> [ActivityDay] {
         Performance.signposter.endInterval("Activity wait", wait)
@@ -119,7 +122,7 @@ public actor AgentActivityLoader {
             let start = time.start(of: first).addingTimeInterval(-ActivityTimeline.idleCap)
             let inputs = inputs(since: start, sources: sources, home: home, fixtureRoot: fixtureRoot)
             let request = Request(days: days, zone: time.timeZone.identifier, home: home.path,
-                                  folders: AgentSource.allCases.map { inputs.logs[$0]!.path }, sources: sources)
+                                  folders: AgentSource.allCases.map { inputs.logs[$0]!.path }, sources: sources, ignoring: ignoring)
             let signature = inputs.signature, indexStamps = inputs.indexes.map(\.stamp)
             if let existing = completed.value(for: request), existing.files == signature, existing.indexes == indexStamps,
                Self.unchanged(existing.dependencies, missing: existing.missing) {
@@ -135,7 +138,8 @@ public actor AgentActivityLoader {
             let result = try days.map { day in
                 try Task.checkCancellation()
                 let nearby = Self.sessions(byID, near: day, time: time)
-                var value = ActivityTimeline.build(sessions: nearby, day: day, time: time, repository: { repos[$0]! })
+                var value = ActivityTimeline.build(sessions: nearby, day: day, time: time, repository: { repos[$0]! },
+                                                   ignoring: ignoring.contains)
                 // The timeline needs carry-in and parent metadata; popovers only need contributing sessions and
                 // that day's events. Don't let eight display requests retain eight copies of the entire history.
                 let ids = value.attention.reduce(into: Set(value.runs.map(\.sessionID))) { $0.formUnion($1.sessionIDs) }
@@ -156,7 +160,7 @@ public actor AgentActivityLoader {
                     + $1.runs.reduce(0) { $0 + 128 + $1.sessionID.utf8.count * 2 + $1.repository.activityCacheCost }
                     + $1.attention.reduce(0) { $0 + 128 + $1.repository.activityCacheCost
                         + $1.sessionIDs.reduce(0) { $0 + 64 + $1.utf8.count * 2 } }
-                    + $1.blocks.count * 32 + $1.totals.keys.reduce(0) { $0 + 128 + $1.activityCacheCost } }
+                    + ($1.blocks.count + $1.ignored.count) * 32 + $1.totals.keys.reduce(0) { $0 + 128 + $1.activityCacheCost } }
             completed.insert(Completed(files: signature, indexes: indexStamps, dependencies: dependencies, missing: missingDependencies, days: result),
                              for: request, cost: cost)
             return result

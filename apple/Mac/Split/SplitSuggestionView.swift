@@ -139,7 +139,8 @@ struct SplitSuggestionBanner: View {
                             if let projectId { desktop.splits.link(repository, to: projectId) } else { desktop.unlink(repository) }
                         },
                         choosingAnew: true,
-                        placeholder: "Which project is \(repository.name) for?")
+                        placeholder: "Which project is \(repository.name) for?",
+                        onIgnore: { desktop.ignore(repository) })
                 }
             } else if let repository = part.repositories.first(where: { $0.identity != nil }) {
                 // A repository whose branches belong to different projects, e.g. a monorepo.

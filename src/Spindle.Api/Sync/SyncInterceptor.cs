@@ -144,7 +144,7 @@ internal sealed class SyncInterceptor(
                 case Agreement a:
                     pending.Add(new SyncChange("catalog", a.WorkspaceId, null));
                     break;
-                // A person's own agent activity: repository links, dismissed suggestions and uploaded sessions.
+                // A person's own agent activity: repository links, dismissed suggestions, ignored repositories and uploaded sessions.
                 case AgentSession s:
                     pending.Add(new SyncChange("agentActivity", null, s.UserId));
                     break;
@@ -153,6 +153,9 @@ internal sealed class SyncInterceptor(
                     break;
                 case SplitSuggestionDismissal d:
                     pending.Add(new SyncChange("agentActivity", null, d.UserId));
+                    break;
+                case IgnoredRepository i:
+                    pending.Add(new SyncChange("agentActivity", null, i.UserId));
                     break;
                 // What the person's agents proposed, waiting in any of their apps.
                 case AgentProposal p:

@@ -36,7 +36,7 @@ public sealed class SplitDriftVectorTests
             ? links.EnumerateObject().ToDictionary(l => Repositories[l.Name].Identity, l => Projects[l.Value.GetString()!].Id)
             : [];
         var repositoryLinks = new RepositoryLinks(chosen, new Dictionary<string, Guid>());
-        var attention = AttentionTimeline.Build(Touches(vector), start.AddDays(-1).ToUnixTimeMilliseconds(), now.AddDays(1).ToUnixTimeMilliseconds());
+        var attention = Evidence(vector, start.AddDays(-1).ToUnixTimeMilliseconds(), now.AddDays(1).ToUnixTimeMilliseconds());
 
         var drift = SplitDrift.Detect(parts, start.ToUnixTimeMilliseconds(), Local(entry.GetProperty("statedAt")).ToUnixTimeMilliseconds(),
             now.ToUnixTimeMilliseconds(), attention, repository => repositoryLinks.ProjectFor(repository, Projects.Values.ToList()));
@@ -59,6 +59,22 @@ public sealed class SplitDriftVectorTests
         Assert.Equal(
             expected.GetProperty("next").EnumerateArray().Select(p => $"{p.GetProperty("project").GetString()} {p.GetProperty("percent").GetInt32()}"),
             drift.ContinuingProjects(nullable).Zip(drift.ContinuingPercents(nullable, percents)).Select(p => $"{Projects.Single(q => q.Value.Id == p.First).Key} {p.Second}"));
+    }
+
+    /// <summary>The ignore list as it syncs, for an account of the tests.</summary>
+    private static IgnoredRepositories Ignoring(JsonElement vector)
+    {
+        const string account = "0c000000-0000-4000-8000-000000000001";
+        return new IgnoredRepositories(account, vector.TryGetProperty("ignored", out var keys)
+            ? keys.EnumerateArray().Select(k => IgnoredRepositories.Hash(Repositories[k.GetString()!].Identity, account))
+            : []);
+    }
+
+    /// <summary>The attention, with ignored repositories' kept apart, as the app reads it, in the order suggestions read it.</summary>
+    private static List<AttentionSegment> Evidence(JsonElement vector, long from, long to)
+    {
+        var (attention, ignored) = AttentionTimeline.Build(Touches(vector), from, to, Ignoring(vector).Contains);
+        return [.. attention.Concat(ignored).OrderBy(a => a.Start)];
     }
 
     private static IEnumerable<AgentTouch> Touches(JsonElement vector) =>

@@ -109,18 +109,31 @@ public sealed class SplitSuggestionVectorTests
     private static JsonElement Case(string list, string name) =>
         Vectors.GetProperty(list).EnumerateArray().Single(c => c.GetProperty("name").GetString() == name);
 
-    /// <summary>The prompts of top-level sessions; a subagent's are not the person's.</summary>
-    private static IEnumerable<AgentTouch> Touches(JsonElement vector) =>
-        vector.GetProperty("sessions").EnumerateArray()
+    /// <summary>
+    /// The prompts of top-level sessions; a subagent's are not the person's. An ignored repository's come as the apps
+    /// upload them: times alone, as a folder outside git's.
+    /// </summary>
+    private static IEnumerable<AgentTouch> Touches(JsonElement vector)
+    {
+        var ignored = vector.TryGetProperty("ignored", out var keys) ? keys.EnumerateArray().Select(r => r.GetString()!).ToHashSet() : [];
+        return vector.GetProperty("sessions").EnumerateArray()
             .Where(s => !s.TryGetProperty("parent", out var parent) || parent.ValueKind == JsonValueKind.Null)
             .SelectMany(s =>
             {
-                var repository = s.GetProperty("repository").ValueKind == JsonValueKind.Null ? null : Repositories[s.GetProperty("repository").GetString()!];
+                var key = s.GetProperty("repository").GetString();
+                if (key is not null && ignored.Contains(key))
+                {
+                    return s.GetProperty("touches").EnumerateArray()
+                        .Select(t => new AgentTouch(Local(t).ToUnixTimeMilliseconds(), s.GetProperty("id").GetString()!, null, []));
+                }
+
+                var repository = key is null ? null : Repositories[key];
                 var branches = s.TryGetProperty("branches", out var list) ? list.EnumerateArray().Select(b => b.GetString()!).ToArray() : [];
                 return s.GetProperty("touches").EnumerateArray()
                     .Select(t => new AgentTouch(Local(t).ToUnixTimeMilliseconds(), s.GetProperty("id").GetString()!, repository, branches));
             })
             .ToList();
+    }
 
     private static Dictionary<string, Guid> LinksOf(JsonElement vector, string property) =>
         vector.TryGetProperty(property, out var links)

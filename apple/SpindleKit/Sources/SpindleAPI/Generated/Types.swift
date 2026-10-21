@@ -158,6 +158,15 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /api/me/agent-activity/dismissals`.
     /// - Remark: Generated from `#/paths//api/me/agent-activity/dismissals/get(listSplitSuggestionDismissals)`.
     func listSplitSuggestionDismissals(_ input: Operations.ListSplitSuggestionDismissals.Input) async throws -> Operations.ListSplitSuggestionDismissals.Output
+    /// - Remark: HTTP `GET /api/me/agent-activity/ignored`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/get(listIgnoredRepositories)`.
+    func listIgnoredRepositories(_ input: Operations.ListIgnoredRepositories.Input) async throws -> Operations.ListIgnoredRepositories.Output
+    /// - Remark: HTTP `PUT /api/me/agent-activity/ignored/{hash}`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/{hash}/put(ignoreRepository)`.
+    func ignoreRepository(_ input: Operations.IgnoreRepository.Input) async throws -> Operations.IgnoreRepository.Output
+    /// - Remark: HTTP `DELETE /api/me/agent-activity/ignored/{hash}`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/{hash}/delete(unignoreRepository)`.
+    func unignoreRepository(_ input: Operations.UnignoreRepository.Input) async throws -> Operations.UnignoreRepository.Output
     /// - Remark: HTTP `GET /api/invitations/{token}`.
     /// - Remark: Generated from `#/paths//api/invitations/{token}/get(previewInvitation)`.
     func previewInvitation(_ input: Operations.PreviewInvitation.Input) async throws -> Operations.PreviewInvitation.Output
@@ -905,6 +914,33 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//api/me/agent-activity/dismissals/get(listSplitSuggestionDismissals)`.
     public func listSplitSuggestionDismissals(headers: Operations.ListSplitSuggestionDismissals.Input.Headers = .init()) async throws -> Operations.ListSplitSuggestionDismissals.Output {
         try await listSplitSuggestionDismissals(Operations.ListSplitSuggestionDismissals.Input(headers: headers))
+    }
+    /// - Remark: HTTP `GET /api/me/agent-activity/ignored`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/get(listIgnoredRepositories)`.
+    public func listIgnoredRepositories(headers: Operations.ListIgnoredRepositories.Input.Headers = .init()) async throws -> Operations.ListIgnoredRepositories.Output {
+        try await listIgnoredRepositories(Operations.ListIgnoredRepositories.Input(headers: headers))
+    }
+    /// - Remark: HTTP `PUT /api/me/agent-activity/ignored/{hash}`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/{hash}/put(ignoreRepository)`.
+    public func ignoreRepository(
+        path: Operations.IgnoreRepository.Input.Path,
+        headers: Operations.IgnoreRepository.Input.Headers = .init()
+    ) async throws -> Operations.IgnoreRepository.Output {
+        try await ignoreRepository(Operations.IgnoreRepository.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `DELETE /api/me/agent-activity/ignored/{hash}`.
+    /// - Remark: Generated from `#/paths//api/me/agent-activity/ignored/{hash}/delete(unignoreRepository)`.
+    public func unignoreRepository(
+        path: Operations.UnignoreRepository.Input.Path,
+        headers: Operations.UnignoreRepository.Input.Headers = .init()
+    ) async throws -> Operations.UnignoreRepository.Output {
+        try await unignoreRepository(Operations.UnignoreRepository.Input(
+            path: path,
+            headers: headers
+        ))
     }
     /// - Remark: HTTP `GET /api/invitations/{token}`.
     /// - Remark: Generated from `#/paths//api/invitations/{token}/get(previewInvitation)`.
