@@ -19,6 +19,16 @@ public sealed class AgentActivityService(string? homePath = null)
         get { lock (cacheGate) return sources; }
         set { lock (cacheGate) { if (sources.SetEquals(value)) return; sources = value.ToHashSet(); generation++; cache.Clear(); } }
     }
+    private IgnoredRepositories ignoring = IgnoredRepositories.None;
+    /// <summary>
+    /// The repositories to leave out of what is read: only their prompts' place in the attention stays
+    /// (<see cref="ActivitySnapshot.Ignored"/>). The logs stay as they are, so a repository taken off the list comes back.
+    /// </summary>
+    public IgnoredRepositories Ignoring
+    {
+        get { lock (cacheGate) return ignoring; }
+        set { lock (cacheGate) ignoring = value; }
+    }
     private sealed record CachedLog(long From, long To, long Offset, long Length, DateTime Modified, AgentLogParser Parser);
     private readonly Dictionary<string, CachedLog> cache = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim readGate = new(1, 1);
@@ -45,12 +55,27 @@ public sealed class AgentActivityService(string? homePath = null)
         var windowTo = new DateTimeOffset(to.UtcDateTime.Date.AddDays(1), TimeSpan.Zero).ToUnixTimeMilliseconds();
         var (sessions, errors, readGeneration, _) = await GatherAsync(windowFrom, windowTo, null, cancellationToken);
         var repositoryOf = RepositoryOf(sessions);
+        var ignored = Ignoring;
+        var ignoredKnown = new Dictionary<string, bool>(StringComparer.Ordinal);
+        bool IsIgnored(AgentRepository? repository) =>
+            repository is not null && (ignoredKnown.TryGetValue(repository.Identity, out var known) ? known : ignoredKnown[repository.Identity] = ignored.Contains(repository));
+        // Ignored sessions' prompts stay, for their place in the attention.
         var touches = new List<AgentTouch>();
         var runs = new List<AgentRun>();
+        var shown = new List<LocalAgentSession>();
         foreach (var session in sessions.Values)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var repository = repositoryOf(session);
+            if (IsIgnored(repository))
+            {
+                // Only where its prompts were: they end the attention before them, as a folder outside git's do.
+                if (session.ParentId is null)
+                    touches.AddRange(session.Events.Where(e => e.IsTouch && e.At >= first - AttentionTimeline.IdleCap && e.At < last)
+                        .Select(e => new AgentTouch(e.At, session.Id, repository)));
+                continue;
+            }
+            shown.Add(session);
             if (session.ParentId is null)
                 touches.AddRange(session.Events.Where(e => e.IsTouch && e.At >= first - AttentionTimeline.IdleCap && e.At < last)
                     .Select(e => new AgentTouch(e.At, session.Id, repository, session.Branches)));
@@ -72,9 +97,10 @@ public sealed class AgentActivityService(string? homePath = null)
             AddRun();
         }
         lock (cacheGate) { if (readGeneration != generation) return ActivitySnapshot.Empty; }
-        return new(sessions.Values.Select(s => s with { Events = s.Events.Where(e => e.At >= first - AttentionTimeline.IdleCap && e.At < last).ToArray() })
+        var (attention, ignoredAttention) = AttentionTimeline.Build(touches, first, last, IsIgnored);
+        return new(shown.Select(s => s with { Events = s.Events.Where(e => e.At >= first - AttentionTimeline.IdleCap && e.At < last).ToArray() })
                 .Where(s => s.Events.Count > 0).ToArray(),
-            AttentionTimeline.Build(touches, first, last), runs.OrderBy(r => r.Start).ToArray(), errors);
+            attention, runs.OrderBy(r => r.Start).ToArray(), errors) { Ignored = ignoredAttention };
     }
 
     /// <summary>

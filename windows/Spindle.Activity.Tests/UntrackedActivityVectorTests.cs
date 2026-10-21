@@ -79,7 +79,12 @@ public sealed class UntrackedActivityVectorTests
             return s.GetProperty("touches").EnumerateArray().Select(t => new AgentTouch(At(t), s.GetProperty("id").GetString()!, repository));
         }).ToList();
         var first = touches.Min(t => t.At);
-        return AttentionTimeline.Build(touches, first - 86_400_000, first + 2 * 86_400_000);
+        const string account = "0c000000-0000-4000-8000-000000000001";
+        var ignoring = new IgnoredRepositories(account, vector.TryGetProperty("ignored", out var keys)
+            ? keys.EnumerateArray().Select(k => IgnoredRepositories.Hash(Repositories[k.GetString()!].Identity, account))
+            : []);
+        // Untracked time reads what shows, without ignored attention.
+        return AttentionTimeline.Build(touches, first - 86_400_000, first + 2 * 86_400_000, ignoring.Contains).Attention;
     }
 
     private static List<TimeRange> Covered(JsonElement vector) =>

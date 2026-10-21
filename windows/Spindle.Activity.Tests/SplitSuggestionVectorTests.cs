@@ -38,7 +38,7 @@ public sealed class SplitSuggestionVectorTests
         var start = Local(entry.GetProperty("start"));
         var stop = Local(entry.GetProperty("stop"));
         // Attention over a few days around the entry, as the server builds it for a range of entries.
-        var attention = AttentionTimeline.Build(Touches(vector), start.AddDays(-2).ToUnixTimeMilliseconds(), stop.AddDays(2).ToUnixTimeMilliseconds());
+        var attention = Evidence(vector, start.AddDays(-2).ToUnixTimeMilliseconds(), stop.AddDays(2).ToUnixTimeMilliseconds());
         var links = new RepositoryLinks(LinksOf(vector, "chosen"), LinksOf(vector, "learned"), RulesOf(vector), NoProjectOf(vector));
 
         var suggestion = SplitSuggestion.Suggest(start.ToUnixTimeMilliseconds(), stop.ToUnixTimeMilliseconds(),
@@ -105,6 +105,22 @@ public sealed class SplitSuggestionVectorTests
         var learned = RepositoryLinks.Learn(entries, attention, now: entries.Max(e => e.Stop!.Value));
 
         Assert.Equal(LinksOf(vector, "expected").OrderBy(l => l.Key), learned.OrderBy(l => l.Key));
+    }
+
+    /// <summary>The ignore list as it syncs, for an account of the tests.</summary>
+    private static IgnoredRepositories Ignoring(JsonElement vector)
+    {
+        const string account = "0c000000-0000-4000-8000-000000000001";
+        return new IgnoredRepositories(account, vector.TryGetProperty("ignored", out var keys)
+            ? keys.EnumerateArray().Select(k => IgnoredRepositories.Hash(Repositories[k.GetString()!].Identity, account))
+            : []);
+    }
+
+    /// <summary>The attention, with ignored repositories' kept apart, as the app reads it, in the order suggestions read it.</summary>
+    private static List<AttentionSegment> Evidence(JsonElement vector, long from, long to)
+    {
+        var (attention, ignored) = AttentionTimeline.Build(Touches(vector), from, to, Ignoring(vector).Contains);
+        return [.. attention.Concat(ignored).OrderBy(a => a.Start)];
     }
 
     private static JsonElement Case(string list, string name) =>
