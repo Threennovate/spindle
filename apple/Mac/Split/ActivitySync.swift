@@ -124,7 +124,11 @@ final class ActivitySync {
             } catch {}
         }
         do {
-            splits.absorb(ignored: try await client.ignoredRepositories())
+            do {
+                splits.absorb(ignored: try await client.ignoredRepositories())
+            } catch let error as APIError where error.status == 404 {
+                // A server from before ignored repositories: the list stays on this Mac, links still come.
+            }
             let links = try await client.repositoryLinks()
             splits.absorb(links)
             splits.absorb(dismissals: try await client.dismissedSplitSuggestions())

@@ -99,7 +99,11 @@ public sealed partial class SplitAdvisor
             try
             {
                 await SendIgnoredAsync();
-                AbsorbIgnored(await api.GetIgnoredRepositoriesAsync());
+                try { AbsorbIgnored(await api.GetIgnoredRepositoriesAsync()); }
+                catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // A server from before ignored repositories: the list stays on this PC, links still come.
+                }
                 var ignoring = Ignoring;
                 Absorb((await api.GetRepositoryLinksAsync()).Where(l => l.WorkspaceId == owner.WorkspaceId && !ignoring.Contains(l.Identity)).ToList());
                 foreach (var id in await api.GetSplitSuggestionDismissalsAsync()) dismissed.Add(id);
