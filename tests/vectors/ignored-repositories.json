@@ -1,0 +1,35 @@
+{
+  "about": "How a repository on the ignore list is named when the list syncs between a person's devices: HMAC-SHA256 with the person's account ID (lower-case, with hyphens, as UTF-8) as the key, over the repository's identity (RepositoryIdentity, as UTF-8), in lower-case hex. The server stores only these, never a name, origin or path. The Mac's Kit (IgnoredRepositoriesTests.swift), the server (IgnoredRepositoryVectorTests.cs) and the Windows app (Spindle.Activity.Tests) all check them. The same identity has another hash for another person, and an account ID in capitals hashes as in lower case.",
+  "cases": [
+    {
+      "account": "0c000000-0000-4000-8000-000000000001",
+      "identity": "origin:github.com/acme/atlas",
+      "hash": "d922dbe5d703f52785c4ccc53856570957b655c44ee7f0cc4c78588edd1ae67d"
+    },
+    {
+      "account": "0c000000-0000-4000-8000-000000000001",
+      "identity": "origin:gitlab.example.com/acme/beacon",
+      "hash": "b1e1ec68af930f6d2c5c343ae85fade056ae3f63528152b2899107d00471ce13"
+    },
+    {
+      "account": "0c000000-0000-4000-8000-000000000002",
+      "identity": "origin:github.com/acme/atlas",
+      "hash": "09701068d892ada3b1d6bb22b355816448c84611a0b8d9e0d9fbb0d32a61e6c0"
+    },
+    {
+      "account": "0c000000-0000-4000-8000-000000000001",
+      "identity": "path:5f1c0e8d2a7b4c6e9f0a1b2c3d4e5f60",
+      "hash": "bd1393f052dab93bfaa82d3acdf46aeb5de68bdfb59d8f065cd9f3178a2dde30"
+    },
+    {
+      "account": "0c000000-0000-4000-8000-000000000001",
+      "identity": "origin:github.com/acme/žeta-ünïcode",
+      "hash": "cc46dd40e6ed8fee1057b83859dd5d009ee539b275847624b49461e3999ec10e"
+    },
+    {
+      "account": "0C000000-0000-4000-8000-000000000001",
+      "identity": "origin:github.com/acme/atlas",
+      "hash": "d922dbe5d703f52785c4ccc53856570957b655c44ee7f0cc4c78588edd1ae67d"
+    }
+  ]
+}

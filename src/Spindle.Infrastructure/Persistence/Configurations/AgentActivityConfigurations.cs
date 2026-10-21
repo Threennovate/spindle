@@ -69,6 +69,17 @@ internal sealed class SplitSuggestionDismissalConfiguration : IEntityTypeConfigu
     }
 }
 
+internal sealed class IgnoredRepositoryConfiguration : IEntityTypeConfiguration<IgnoredRepository>
+{
+    public void Configure(EntityTypeBuilder<IgnoredRepository> builder)
+    {
+        builder.HasKey(i => new { i.UserId, i.Hash });
+        builder.Property(i => i.Hash).HasMaxLength(IgnoredRepository.HashLength);
+
+        builder.HasOne<AppUser>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class AgentProposalConfiguration : IEntityTypeConfiguration<AgentProposal>
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);

@@ -269,6 +269,58 @@ public sealed class AgentActivityTests(PostgresApiFactory factory)
     }
 
     [Fact]
+    public async Task Ignoring_a_repository_keeps_its_hash_alone_and_deletes_what_was_uploaded_or_linked_for_it()
+    {
+        var user = await TestUser.RegisterAsync(factory);
+        var other = await TestUser.RegisterAsync(factory);
+        var atlas = await ProjectAsync(user, "Atlas");
+        var beacon = await ProjectAsync(user, "Beacon");
+        await user.CreateAsync<TimeEntryResponse>("/time-entries", new { start = At(9), stop = At(10), projectId = atlas.Id });
+        await SettingsAsync(user, sync: true, titles: true);
+        await UploadAsync(user, Sessions());
+        await user.PutAsync("/agent-activity/links", new { repository = Repository("beacon"), projectId = beacon.Id });
+        var hash = IgnoredRepository.HashOf(user.UserId, "origin:github.com/acme/beacon");
+
+        var malformed = await user.Client.PutAsync("/api/me/agent-activity/ignored/BEACON", null, Ct);
+        var ignored = await user.Client.PutAsync($"/api/me/agent-activity/ignored/{hash}", null, Ct);
+        var again = await user.Client.PutAsync($"/api/me/agent-activity/ignored/{hash}", null, Ct);
+        var listed = await user.Client.GetFromJsonAsync<List<string>>("/api/me/agent-activity/ignored", TestJson.Options, Ct);
+        var othersList = await other.Client.GetFromJsonAsync<List<string>>("/api/me/agent-activity/ignored", TestJson.Options, Ct);
+        var left = await SessionsAsync(user);
+        var links = await user.Client.GetFromJsonAsync<List<RepositoryLinkResponse>>("/api/me/agent-activity/links?includeNoProject=true", TestJson.Options, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, malformed.StatusCode);
+        Assert.Equal((HttpStatusCode.NoContent, HttpStatusCode.NoContent), (ignored.StatusCode, again.StatusCode));
+        Assert.Equal([hash], listed);
+        Assert.Empty(othersList!);
+        Assert.Equal(["claude:a"], left.Select(s => s.SessionId));
+        Assert.Empty(links!);
+
+        // A device that hasn't heard yet sends it named: only its prompts' times are kept, and its link isn't.
+        await UploadAsync(user, Sessions());
+        var relinked = await user.PutAsync("/agent-activity/links", new { repository = Repository("beacon"), projectId = beacon.Id });
+        var anonymous = (await SessionsAsync(user)).Single(s => s.SessionId == "codex:b");
+
+        Assert.Equal(HttpStatusCode.NoContent, relinked.StatusCode);
+        Assert.Empty((await user.Client.GetFromJsonAsync<List<RepositoryLinkResponse>>("/api/me/agent-activity/links?includeNoProject=true", TestJson.Options, Ct))!);
+        Assert.Equal((null, null, null, 0, 0), (anonymous.RepositoryIdentity, anonymous.RepositoryName, anonymous.Title, anonymous.Branches.Length, anonymous.RunStarts.Length));
+        Assert.Equal([Ms(9, 10), Ms(9, 30), Ms(9, 50)], anonymous.Touches);
+        // Its prompts still end atlas's attention, and the time they leave stays on the entry's project: nothing to split.
+        Assert.Empty(await SuggestionsAsync(user));
+        using (var export = JsonDocument.Parse(await user.Client.GetStringAsync("/api/me/export", Ct)))
+        {
+            Assert.Equal(hash, export.RootElement.GetProperty("agentActivity").GetProperty("ignoredRepositories")[0].GetString());
+        }
+
+        var unignored = await user.Client.DeleteAsync($"/api/me/agent-activity/ignored/{hash}", Ct);
+        await UploadAsync(user, Sessions());
+
+        Assert.Equal(HttpStatusCode.NoContent, unignored.StatusCode);
+        Assert.Empty((await user.Client.GetFromJsonAsync<List<string>>("/api/me/agent-activity/ignored", TestJson.Options, Ct))!);
+        Assert.Equal([atlas.Id, beacon.Id], Assert.Single(await SuggestionsAsync(user)).Parts.Select(p => p.Target.ProjectId!.Value));
+    }
+
+    [Fact]
     public async Task Branch_rules_send_a_repositorys_work_on_their_branches_to_another_project_and_task()
     {
         var user = await TestUser.RegisterAsync(factory);
@@ -415,6 +467,7 @@ public sealed class AgentActivityTests(PostgresApiFactory factory)
         await UploadAsync(user, Sessions());
         await user.PutAsync("/agent-activity/links", new { repository = Repository("atlas"), projectId = atlas.Id });
         await user.PostAsync($"/time-entries/{entry.Id}/split-suggestion/dismiss", new { });
+        await user.Client.PutAsync($"/api/me/agent-activity/ignored/{IgnoredRepository.HashOf(user.UserId, "origin:github.com/acme/zeta")}", null, Ct);
 
         using var export = JsonDocument.Parse(await user.Client.GetStringAsync("/api/me/export", Ct));
         var activity = export.RootElement.GetProperty("agentActivity");
@@ -428,6 +481,14 @@ public sealed class AgentActivityTests(PostgresApiFactory factory)
         Assert.False(await db.AgentSessions.AnyAsync(s => s.UserId == user.UserId, Ct));
         Assert.False(await db.AgentRepositoryLinks.AnyAsync(l => l.UserId == user.UserId, Ct));
         Assert.False(await db.SplitSuggestionDismissals.AnyAsync(d => d.UserId == user.UserId, Ct));
+        Assert.False(await db.IgnoredRepositories.AnyAsync(i => i.UserId == user.UserId, Ct));
+    }
+
+    private async Task<List<AgentSession>> SessionsAsync(TestUser user)
+    {
+        await using var scope = factory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.AgentSessions.AsNoTracking().Where(s => s.UserId == user.UserId).OrderBy(s => s.SessionId).ToListAsync(Ct);
     }
 
     private async Task<List<string?>> TitlesAsync(TestUser user)

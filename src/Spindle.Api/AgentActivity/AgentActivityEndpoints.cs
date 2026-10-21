@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Spindle.Api.Auth;
@@ -16,7 +17,7 @@ namespace Spindle.Api.AgentActivity;
 /// It is the person's own: everything here is under their account and only ever about their own entries, never
 /// visible to admins or in reports.
 /// </summary>
-internal static class AgentActivityEndpoints
+internal static partial class AgentActivityEndpoints
 {
     private static readonly TimeSpan MaxSuggestionRange = TimeSpan.FromDays(62);
 
@@ -34,6 +35,9 @@ internal static class AgentActivityEndpoints
         me.MapPut("/sessions", UploadAsync).WithName("uploadAgentSessions").ProducesProblem(StatusCodes.Status409Conflict);
         me.MapGet("/links", ListLinksAsync).WithName("listRepositoryLinks");
         me.MapGet("/dismissals", ListDismissalsAsync).WithName("listSplitSuggestionDismissals");
+        me.MapGet("/ignored", ListIgnoredAsync).WithName("listIgnoredRepositories");
+        me.MapPut("/ignored/{hash}", IgnoreAsync).WithName("ignoreRepository");
+        me.MapDelete("/ignored/{hash}", UnignoreAsync).WithName("unignoreRepository");
 
         return api;
     }
@@ -149,13 +153,19 @@ internal static class AgentActivityEndpoints
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Agent activity sync is off.");
         }
 
+        // A device that hasn't heard yet that a repository is ignored still sends it named: keep only its prompts' times,
+        // as the apps send them.
+        var ignored = await db.IgnoredRepositories.Where(i => i.UserId == userId).Select(i => i.Hash).ToListAsync(cancellationToken);
+        var sessions = ignored.Count == 0 ? request.Sessions : request.Sessions.Select(s =>
+            s.Repository is { } repository && ignored.Contains(IgnoredRepository.HashOf(userId, repository.Identity)) ? Anonymous(s) : s).ToList();
+
         var now = timeProvider.GetUtcNow();
-        var ids = request.Sessions.Select(s => s.SessionId).ToList();
+        var ids = sessions.Select(s => s.SessionId).ToList();
         var existing = await db.AgentSessions
             .Where(s => s.UserId == userId && s.DeviceId == request.DeviceId && ids.Contains(s.SessionId))
             .ToListAsync(cancellationToken);
         var saved = 0;
-        foreach (var upload in request.Sessions)
+        foreach (var upload in sessions)
         {
             var session = existing.SingleOrDefault(s => s.Source == upload.Source && s.SessionId == upload.SessionId);
             var touches = upload.Touches.Order().ToArray();
@@ -201,6 +211,99 @@ internal static class AgentActivityEndpoints
     }
 
     /// <summary>
+    /// A session in an ignored repository as the apps send it: its prompts' times alone, which still end the attention
+    /// before them, as a folder outside git's do. A subagent's say nothing at all.
+    /// </summary>
+    private static AgentSessionUpload Anonymous(AgentSessionUpload session) => session with
+    {
+        ParentSessionId = null,
+        Repository = null,
+        Title = null,
+        Branches = [],
+        Touches = session.ParentSessionId is null ? session.Touches : [],
+        Runs = [],
+    };
+
+    /// <summary>The repositories the person ignores, as the hashes their devices sent.</summary>
+    private static async Task<Ok<List<string>>> ListIgnoredAsync(
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = principal.GetUserId();
+        return TypedResults.Ok(await db.IgnoredRepositories.AsNoTracking()
+            .Where(i => i.UserId == userId)
+            .OrderBy(i => i.CreatedAt).ThenBy(i => i.Hash)
+            .Select(i => i.Hash)
+            .ToListAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Ignores a repository on all the person's devices, named by <see cref="IgnoredRepository.HashOf"/> alone. What was
+    /// uploaded or linked for it is deleted: the server finds it by hashing the identities it holds.
+    /// </summary>
+    private static async Task<Results<NoContent, ValidationProblem>> IgnoreAsync(
+        string hash,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        if (!IgnoredHash().IsMatch(hash))
+        {
+            return Problems.Validation("hash", "Name the repository by its hash: 64 lower-case hex digits.");
+        }
+
+        var userId = principal.GetUserId();
+        var known = await db.IgnoredRepositories.Where(i => i.UserId == userId).Select(i => i.Hash).ToListAsync(cancellationToken);
+        if (!known.Contains(hash))
+        {
+            if (known.Count >= IgnoredRepository.MaxPerUser)
+            {
+                return Problems.Validation("hash", $"At most {IgnoredRepository.MaxPerUser} repositories can be ignored.");
+            }
+
+            db.IgnoredRepositories.Add(new IgnoredRepository { UserId = userId, Hash = hash, CreatedAt = timeProvider.GetUtcNow() });
+        }
+
+        var identities = (await db.AgentSessions.Where(s => s.UserId == userId && s.RepositoryIdentity != null)
+                .Select(s => s.RepositoryIdentity!).Distinct().ToListAsync(cancellationToken))
+            .Concat(await db.AgentRepositoryLinks.Where(l => l.UserId == userId).Select(l => l.Identity).ToListAsync(cancellationToken))
+            .Distinct()
+            .Where(identity => IgnoredRepository.HashOf(userId, identity) == hash)
+            .ToList();
+        if (identities.Count > 0)
+        {
+            await db.AgentSessions.Where(s => s.UserId == userId && identities.Contains(s.RepositoryIdentity!)).ExecuteDeleteAsync(cancellationToken);
+            await db.AgentRepositoryLinks.Where(l => l.UserId == userId && identities.Contains(l.Identity)).ExecuteDeleteAsync(cancellationToken);
+        }
+
+        // Two devices saying it at once is still one.
+        await db.TrySaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>Stops ignoring a repository. Its activity comes back as the devices upload it again.</summary>
+    private static async Task<NoContent> UnignoreAsync(
+        string hash,
+        ClaimsPrincipal principal,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = principal.GetUserId();
+        if (await db.IgnoredRepositories.SingleOrDefaultAsync(i => i.UserId == userId && i.Hash == hash, cancellationToken) is { } ignored)
+        {
+            db.IgnoredRepositories.Remove(ignored);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return TypedResults.NoContent();
+    }
+
+    [GeneratedRegex(IgnoredRepository.HashPattern)]
+    private static partial Regex IgnoredHash();
+
+    /// <summary>
     /// The projects the person chose for their repositories, in every workspace, and with <paramref name="includeNoProject"/>
     /// the repositories they said go to no project. Apps that don't know those yet don't ask for them.
     /// </summary>
@@ -239,6 +342,13 @@ internal static class AgentActivityEndpoints
         CancellationToken cancellationToken)
     {
         var identity = request.Repository.Identity;
+        var hash = IgnoredRepository.HashOf(workspace.UserId, identity);
+        if (await db.IgnoredRepositories.AnyAsync(i => i.UserId == workspace.UserId && i.Hash == hash, cancellationToken))
+        {
+            // An ignored repository has no link, nor a name on the server. A device that hasn't heard yet is told it's done.
+            return TypedResults.NoContent();
+        }
+
         var link = await db.AgentRepositoryLinks.SingleOrDefaultAsync(l => l.UserId == workspace.UserId && l.Identity == identity, cancellationToken);
         if (request.ProjectId is not { } projectId)
         {

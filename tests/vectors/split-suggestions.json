@@ -1,5 +1,5 @@
 {
-  "about": "Split suggestions from agent activity. The Mac's Kit (SplitSuggestionVectorTests.swift) and the API (SplitSuggestionVectorTests.cs) both run these cases, so a split suggested on the web is the one the Mac suggests. Times are wall-clock times in timeZone. A session without a repository ran in a folder outside git. Projects are referred to by key; the entry's project is the time the logs leave open. Each part's prompts are those sent within the entry, and strength says how loudly the suggestion may be offered. A session's branches are those it ran on; rules are branch rules on a repository's link, in order, and a part's task is the one its rule names. branchPatterns are how a rule's pattern reads a branch.",
+  "about": "Split suggestions from agent activity. The Mac's Kit (SplitSuggestionVectorTests.swift) and the API (SplitSuggestionVectorTests.cs) both run these cases, so a split suggested on the web is the one the Mac suggests. Times are wall-clock times in timeZone. A session without a repository ran in a folder outside git; ignored lists repositories on the person's ignore list, whose sessions the server gets as a folder outside git's (prompt times alone). Projects are referred to by key; the entry's project is the time the logs leave open. Each part's prompts are those sent within the entry, and strength says how loudly the suggestion may be offered. A session's branches are those it ran on; rules are branch rules on a repository's link, in order, and a part's task is the one its rule names. branchPatterns are how a rule's pattern reads a branch.",
   "timeZone": "Europe/Zagreb",
   "projects": {
     "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
@@ -455,6 +455,38 @@
         ],
         "strength": "strong"
       }
+    },
+    {
+      "name": "an ignored repository's prompts count for nothing and end the time between two prompts, as a folder outside git's do",
+      "ignored": ["zeta"],
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:30"] },
+        { "id": "z", "repository": "zeta", "branches": ["private"], "touches": ["2026-09-14 09:10"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": {
+        "parts": [
+          { "project": "atlas", "percent": 67, "attention": 1200, "unattributed": 1200, "prompts": 2 },
+          { "project": "beacon", "percent": 33, "attention": 1200, "unattributed": 0, "prompts": 2 }
+        ],
+        "coverage": 0.6666666666666666,
+        "stretches": [
+          { "project": "atlas", "start": "2026-09-14 09:00", "end": "2026-09-14 09:40" },
+          { "project": "beacon", "start": "2026-09-14 09:40", "end": "2026-09-14 10:00" }
+        ],
+        "strength": "strong"
+      }
+    },
+    {
+      "name": "an ignored repository is never a part, however long its agents worked",
+      "ignored": ["zeta"],
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10"] },
+        { "id": "z", "repository": "zeta", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": { "start": "2026-09-14 09:00", "stop": "2026-09-14 10:00", "project": "atlas" },
+      "expected": null
     }
   ],
   "learning": [
