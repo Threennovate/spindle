@@ -165,6 +165,7 @@ struct GeneralSettings: View {
 
             if settings.useAgentLogs, let tracker = model.tracker {
                 linkedRepositories(tracker)
+                ignoredRepositories
             }
 
             Section {
@@ -252,12 +253,13 @@ struct GeneralSettings: View {
                         if link.projectId != nil {
                             Button("Unlink", role: .destructive) { desktop.unlink(link.repository) }
                         }
+                        Button("Ignore Repository") { desktop.ignore(link.repository) }
                     }
                 }
             } header: {
                 Text("Linked repositories")
             } footer: {
-                Text("Where each repository's work goes; No Project unlinks it. Branches can go to another project, e.g. a client's branches in a monorepo.")
+                Text("Where each repository's work goes; No Project unlinks it, and Ignore Repository leaves its work out of Spindle. Branches can go to another project, e.g. a client's branches in a monorepo.")
             }
         }
     }
@@ -292,8 +294,37 @@ struct GeneralSettings: View {
                     }
                 },
                 taken: { _, task in task != nil },
-                placeholder: "Which project is \(repository.name) for?")
+                placeholder: "Which project is \(repository.name) for?",
+                onIgnore: { desktop.ignore(repository) })
             .environment(model.notices)
+        }
+    }
+
+    /// The repositories the person ignores, on all their devices, to stop ignoring one. The account has only hashes,
+    /// so a repository ignored on another device and never seen here has no name.
+    @ViewBuilder private var ignoredRepositories: some View {
+        let splits = desktop.splits
+        let ignored = splits.ignoredHashes.map { (hash: $0, name: splits.ignoredName($0)) }
+            .sorted { ($0.name ?? "\u{10FFFF}", $0.hash) < ($1.name ?? "\u{10FFFF}", $1.hash) }
+        if !ignored.isEmpty {
+            Section {
+                ForEach(ignored, id: \.hash) { repository in
+                    LabeledContent {
+                        Button("Stop Ignoring") { splits.unignore(repository.hash) }
+                            .accessibilityLabel("Stop ignoring \(repository.name ?? "this repository")")
+                    } label: {
+                        if let name = repository.name {
+                            Text(name)
+                        } else {
+                            Text("A repository ignored on another device").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("Ignored repositories")
+            } footer: {
+                Text("Their agent work shows nowhere and is never uploaded; their prompts only end the time before them. The logs stay as they are, so it comes back when you stop ignoring one. Your account keeps only a fingerprint of each, never its name.")
+            }
         }
     }
 

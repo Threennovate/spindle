@@ -540,7 +540,8 @@ private struct ReviewRow: View {
                     if let projectId { desktop.splits.link(repository, to: projectId) } else { desktop.unlink(repository) }
                 },
                 choosingAnew: true,
-                placeholder: "Which project is \(repository.name) for?")
+                placeholder: "Which project is \(repository.name) for?",
+                onIgnore: { desktop.ignore(repository) })
         }
     }
 }

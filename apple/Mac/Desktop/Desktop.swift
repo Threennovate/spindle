@@ -538,6 +538,16 @@ final class Desktop {
         })
     }
 
+    /// Ignores a repository on every device, with Undo, which brings back its link too.
+    func ignore(_ repository: ActivityRepository) {
+        let before = splits.choice(of: repository)
+        guard let hash = splits.ignore(repository) else { return }
+        model.notices.show("Ignored \(repository.name)", action: Notice.Action(title: "Undo") { [weak self] in
+            self?.splits.unignore(hash)
+            if before != .unchosen { self?.splits.choose(before, for: repository) }
+        })
+    }
+
     /// Opens a split entry whose work changed in the editor, to change its split or times there.
     func review(_ offer: DriftOffer) {
         splits.answer(offer)

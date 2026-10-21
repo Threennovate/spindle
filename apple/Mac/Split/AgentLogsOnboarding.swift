@@ -14,8 +14,10 @@ struct AgentLogsOnboarding: View {
 
     @State private var step: Step = Self.firstStep
     @State private var findings: Findings?
-    /// The project chosen for each repository, by its identity; nil for none.
+    /// The project chosen for each repository, by its identity; nil for none, `ignore` to ignore it.
     @State private var choices: [String: String?] = [:]
+    /// The choice that ignores a repository, which no project's ID can be.
+    private static let ignore = "ignore"
     @State private var branchRules: BranchRulesTarget?
 
     /// The days the finding is about, and the review opens on.
@@ -198,6 +200,7 @@ struct AgentLogsOnboarding: View {
                 get: { choices[key] ?? nil },
                 set: { choices[key] = .some($0) })) {
                 Text("No Project").tag(String?.none)
+                Text("Ignore Repository").tag(String?.some(Self.ignore))
                 Divider()
                 ForEach(projects) { project in
                     Text(project.name).tag(String?.some(project.id))
@@ -295,7 +298,8 @@ struct AgentLogsOnboarding: View {
     }
 
     private var linkTitle: String {
-        let count = changedLinks.count
+        let count = changedLinks.count, ignored = ignoredHere.count
+        if ignored > 0 { return count + ignored == 1 ? "Save 1 Repository" : "Save \(count + ignored) Repositories" }
         return count == 0 ? "Next" : count == 1 ? "Link 1 Repository" : "Link \(count) Repositories"
     }
 
@@ -306,16 +310,27 @@ struct AgentLogsOnboarding: View {
         guard let findings else { return [] }
         return findings.repositories.compactMap { found in
             let repository = found.repository
-            guard let identity = repository.identity, let projectId = choices[identity] ?? nil,
+            guard let identity = repository.identity, let projectId = choices[identity] ?? nil, projectId != Self.ignore,
                   desktop.splits.chosen[identity] != projectId else { return nil }
             return (repository, projectId)
         }
+    }
+
+    /// The repositories to ignore, as chosen here.
+    private var ignoredHere: [ActivityRepository] {
+        (findings?.repositories ?? []).map(\.repository).filter { $0.identity.map { (choices[$0] ?? nil) == Self.ignore } ?? false }
     }
 
     private func saveLinks() {
         for (repository, projectId) in changedLinks {
             desktop.splits.link(repository, to: projectId)
         }
+        let ignored = ignoredHere
+        for repository in ignored {
+            desktop.splits.ignore(repository)
+        }
+        // The days read so far had them; the review reads them again without.
+        if !ignored.isEmpty { Task { await desktop.loadReview(week, tracker: tracker) } }
     }
 
     /// Reads what the logs say about the days loaded, by the same rules as the suggestions.

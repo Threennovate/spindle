@@ -24,6 +24,7 @@ final class SplitAdvisor {
         let zone: String
         let fixtureRoot: URL?
         let revision: Int
+        let ignoring: IgnoredRepositories
     }
     @ObservationIgnored private var cachedContext: Context?
     @ObservationIgnored private var cachedTime: UserTime?
@@ -34,7 +35,7 @@ final class SplitAdvisor {
 
     func context(time: UserTime) -> Context {
         Context(enabled: isEnabled, sources: sources, zone: time.timeZone.identifier,
-                fixtureRoot: ActivitySnapshot.root, revision: settings.activityRevision)
+                fixtureRoot: ActivitySnapshot.root, revision: settings.activityRevision, ignoring: ignoring)
     }
 
     struct Request: Equatable {
@@ -84,6 +85,17 @@ final class SplitAdvisor {
     private(set) var unsentLinks: [String: UnsentLink]
     /// Entries kept as they are here that the account doesn't know of yet, with their workspace.
     private(set) var unsentDismissals: [String: String]
+    /// The person's account, whose ID keys the hashes of ignored repositories.
+    var account: String? {
+        didSet { if account != oldValue { accountChanged(from: oldValue) } }
+    }
+    /// The repositories the person ignores, as hashes of their identities (`IgnoredRepositories`), kept here so the
+    /// logs read leave them out offline too.
+    private(set) var ignoredHashes: Set<String>
+    /// The names of ignored repositories as this Mac knew them, by hash. The account has the hashes alone.
+    private(set) var ignoredNames: [String: String]
+    /// Repositories ignored (true) or no longer ignored (false) here that the account doesn't know of yet, by hash.
+    private(set) var unsentIgnores: [String: Bool]
     /// Links learned from the entries and activity loaded so far.
     private(set) var learned: [String: String] = [:] {
         didSet { if learned != oldValue { inputs += 1 } }
@@ -138,6 +150,10 @@ final class SplitAdvisor {
         names = defaults.dictionary(forKey: Self.namesKey) as? [String: String] ?? [:]
         unsentLinks = defaults.data(forKey: Self.unsentLinksKey).flatMap { try? JSONDecoder().decode([String: UnsentLink].self, from: $0) } ?? [:]
         unsentDismissals = defaults.dictionary(forKey: Self.unsentDismissalsKey) as? [String: String] ?? [:]
+        account = defaults.string(forKey: Self.ignoredAccountKey)
+        ignoredHashes = Set(defaults.stringArray(forKey: Self.ignoredKey) ?? [])
+        ignoredNames = defaults.dictionary(forKey: Self.ignoredNamesKey) as? [String: String] ?? [:]
+        unsentIgnores = defaults.dictionary(forKey: Self.unsentIgnoresKey) as? [String: Bool] ?? [:]
         dismissed = Set(defaults.stringArray(forKey: "dismissedSplitSuggestions") ?? [])
         dismissedUntracked = Set(defaults.stringArray(forKey: Self.dismissedUntrackedKey) ?? [])
         putOff = Set(defaults.stringArray(forKey: Self.putOffKey) ?? [])
@@ -153,6 +169,10 @@ final class SplitAdvisor {
     private static let statementsKey = "splitStatements"
     private static let dismissedUntrackedKey = "dismissedUntrackedTime"
     private static let putOffKey = "reviewPutOff"
+    private static let ignoredKey = "ignoredRepositories"
+    private static let ignoredAccountKey = "ignoredRepositoriesAccount"
+    private static let ignoredNamesKey = "ignoredRepositoryNames"
+    private static let unsentIgnoresKey = "unsentIgnoredRepositories"
 
     /// Links from before they synced were kept by the repository's path. They are kept by its identity now, and go to
     /// the account like a new choice.
@@ -209,7 +229,7 @@ final class SplitAdvisor {
         }
         guard !missing.isEmpty else { return }
         guard let loaded = try? await AgentActivityLoader.shared.load(
-            days: missing, time: tracker.time, sources: sources, fixtureRoot: ActivitySnapshot.root) else { return }
+            days: missing, time: tracker.time, sources: sources, ignoring: context.ignoring, fixtureRoot: ActivitySnapshot.root) else { return }
         guard !Task.isCancelled, context == self.context(time: tracker.time) else { return }
         absorb(loaded, entries: tracker.entries, time: tracker.time, revision: revision)
     }
@@ -721,6 +741,99 @@ final class SplitAdvisor {
         saveLinks()
     }
 
+    // MARK: - Ignored repositories
+
+    /// The repositories to leave out of everything read from the logs.
+    var ignoring: IgnoredRepositories {
+        account.map { IgnoredRepositories(account: $0, hashes: ignoredHashes) } ?? .none
+    }
+
+    /// Whether the person ignores this repository.
+    func isIgnored(_ repository: ActivityRepository) -> Bool {
+        ignoring.contains(repository)
+    }
+
+    /// Ignores a repository on every device: none of its prompts and runs show or are uploaded from now on, and its
+    /// link goes, so the account keeps nothing that names it. Returns its hash, to stop ignoring it with.
+    @discardableResult
+    func ignore(_ repository: ActivityRepository) -> String? {
+        guard let identity = repository.identity, let account else { return nil }
+        let hash = IgnoredRepositories.hash(identity, account: account)
+        ignoredNames[hash] = repository.name
+        unsentIgnores[hash] = true
+        ignoredHashes.insert(hash)
+        forgetLink(identity)
+        saveIgnored()
+        return hash
+    }
+
+    /// Stops ignoring a repository on every device; its activity comes back from the logs, which were never changed.
+    func unignore(_ hash: String) {
+        guard ignoredHashes.contains(hash) || unsentIgnores[hash] == true else { return }
+        unsentIgnores[hash] = false
+        ignoredHashes.remove(hash)
+        saveIgnored()
+    }
+
+    /// An ignored repository, by hash, with its name as this Mac knew it; nil when it was ignored elsewhere and this
+    /// Mac never saw it.
+    func ignoredName(_ hash: String) -> String? {
+        ignoredNames[hash]
+    }
+
+    /// The account's list, with what was changed here and not sent yet. Names come from links and activity read so far,
+    /// before both forget the repositories.
+    func absorb(ignored hashes: [String]) {
+        var next = Set(hashes)
+        for (hash, ignored) in unsentIgnores {
+            if ignored { next.insert(hash) } else { next.remove(hash) }
+        }
+        guard next != ignoredHashes, let account else { return }
+        let added = next.subtracting(ignoredHashes)
+        if !added.isEmpty {
+            let known = Set(names.keys).union(keptDays.values.flatMap(\.attention).compactMap(\.repository.identity))
+            for identity in known where added.contains(IgnoredRepositories.hash(identity, account: account)) {
+                let hash = IgnoredRepositories.hash(identity, account: account)
+                ignoredNames[hash] = ignoredNames[hash] ?? names[identity] ?? repository(identity).name
+                forgetLink(identity)
+            }
+        }
+        ignoredHashes = next
+        saveIgnored()
+    }
+
+    /// The account has this change now, unless it was changed again meanwhile.
+    func sent(ignore hash: String, _ ignored: Bool) {
+        guard unsentIgnores[hash] == ignored else { return }
+        unsentIgnores.removeValue(forKey: hash)
+        saveIgnored()
+    }
+
+    /// The hashes are the account's own: another account's list says nothing here.
+    private func accountChanged(from previous: String?) {
+        guard previous != nil, account != nil else { return }
+        ignoredHashes = []
+        ignoredNames = [:]
+        unsentIgnores = [:]
+        saveIgnored()
+    }
+
+    private func forgetLink(_ identity: String) {
+        chosen[identity] = nil
+        rules[identity] = nil
+        noProject.remove(identity)
+        names[identity] = nil
+        unsentLinks[identity] = nil
+        saveLinks()
+    }
+
+    private func saveIgnored() {
+        defaults.set(account, forKey: Self.ignoredAccountKey)
+        defaults.set(ignoredHashes.sorted(), forKey: Self.ignoredKey)
+        defaults.set(ignoredNames.filter { ignoredHashes.contains($0.key) || unsentIgnores[$0.key] != nil }, forKey: Self.ignoredNamesKey)
+        defaults.set(unsentIgnores, forKey: Self.unsentIgnoresKey)
+    }
+
     /// Stops suggesting a split for this entry, on every device.
     func dismiss(_ entryId: String, workspaceId: String) {
         withdrawOffer(entryId)
@@ -774,8 +887,10 @@ final class SplitAdvisor {
         saveLinks()
     }
 
-    /// The links as the account lists them.
+    /// The links as the account lists them, but those of repositories ignored here, which the account forgets.
     func absorb(_ links: [RepositoryLink]) {
+        let ignoring = ignoring
+        let links = links.filter { !ignoring.contains(identity: $0.identity) }
         absorb(links: Dictionary(links.compactMap { link in link.projectId.map { (link.identity, $0) } }, uniquingKeysWith: { first, _ in first }),
                rules: Dictionary(links.map { ($0.identity, $0.rules) }, uniquingKeysWith: { first, _ in first }),
                names: Dictionary(links.map { ($0.identity, $0.name) }, uniquingKeysWith: { first, _ in first }),

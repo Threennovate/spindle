@@ -78,6 +78,71 @@ struct SplitAdvisorTests {
         #expect(splits.links.project(for: atlas, among: projects) == "p-atlas")
     }
 
+    @Test func anIgnoredRepositoryLosesItsLinkGoesToTheAccountAsAHashAndComesBack() throws {
+        let defaults = defaults()
+        let splits = advisor(defaults)
+        let account = "0C000000-0000-4000-8000-000000000001"
+        let atlas = ActivityRepository(key: "/code/atlas", name: "atlas", origin: "https://github.com/acme/atlas", isRepository: true)
+        let identity = try #require(atlas.identity)
+        splits.account = account
+        splits.link(atlas, to: "p-atlas")
+        splits.sent(link: identity, projectId: "p-atlas")
+        let context = splits.context(time: UserTime(timeZone: .current))
+
+        let hash = try #require(splits.ignore(atlas))
+
+        #expect(hash == IgnoredRepositories.hash(identity, account: account.lowercased()))
+        #expect(splits.isIgnored(atlas))
+        #expect(splits.chosen.isEmpty && splits.names[identity] == nil && splits.unsentLinks.isEmpty)
+        #expect(splits.unsentIgnores == [hash: true])
+        #expect(splits.ignoredName(hash) == "atlas")
+        // What was read so far had it, so it is read again.
+        #expect(splits.context(time: UserTime(timeZone: .current)) != context)
+        // The account's links, which may not have heard yet, don't bring its link back.
+        splits.absorb([RepositoryLink(identity: identity, name: "atlas", projectId: "p-atlas", workspaceId: "w", branchRules: [])])
+        #expect(splits.chosen.isEmpty)
+
+        // Kept on this Mac, and the account's list doesn't undo what wasn't sent.
+        let again = advisor(defaults)
+        again.absorb(ignored: [])
+        #expect(again.isIgnored(atlas) && again.ignoredName(hash) == "atlas")
+        again.sent(ignore: hash, true)
+        again.absorb(ignored: [])
+        #expect(!again.isIgnored(atlas))
+
+        splits.unignore(hash)
+        #expect(!splits.isIgnored(atlas))
+        #expect(splits.unsentIgnores == [hash: false])
+    }
+
+    @Test func aRepositoryIgnoredOnAnotherDeviceIsNamedFromWhatThisMacKnows() throws {
+        let splits = advisor(defaults())
+        let account = "0c000000-0000-4000-8000-000000000001"
+        let beacon = ActivityRepository(key: "/code/beacon", name: "beacon", origin: "https://github.com/acme/beacon", isRepository: true)
+        splits.account = account
+        splits.unlink(beacon)
+        let hash = IgnoredRepositories.hash(try #require(beacon.identity), account: account)
+
+        splits.absorb(ignored: [hash, String(repeating: "0", count: 64)])
+
+        #expect(splits.ignoredHashes.count == 2)
+        #expect(splits.ignoredName(hash) == "beacon")
+        #expect(splits.ignoredName(String(repeating: "0", count: 64)) == nil)
+        #expect(splits.noProject.isEmpty)
+        #expect(splits.unsentIgnores.isEmpty)
+    }
+
+    @Test func anotherAccountsListIsNotKept() throws {
+        let splits = advisor(defaults())
+        let atlas = ActivityRepository(key: "/code/atlas", name: "atlas", origin: "https://github.com/acme/atlas", isRepository: true)
+        splits.account = "0c000000-0000-4000-8000-000000000001"
+        splits.ignore(atlas)
+
+        splits.account = "0c000000-0000-4000-8000-000000000002"
+
+        #expect(splits.ignoredHashes.isEmpty && splits.unsentIgnores.isEmpty && !splits.isIgnored(atlas))
+    }
+
     @Test func branchRulesSendSomeBranchesElsewhereGoWithTheLinkAndNameWhatAgentsDoNow() throws {
         let defaults = defaults()
         let settings = DesktopSettings(defaults: defaults, clearActivityCache: {})
