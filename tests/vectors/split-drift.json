@@ -1,5 +1,5 @@
 {
-  "about": "When the work changes after a running entry was split (SplitDrift). The Mac's Kit (SplitDriftVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases. Times are wall-clock times in timeZone; statedAt is when the entry's current split was set, and now is the moment it is checked. Projects and repositories are as in split-suggestions.json. expected is null when nothing changed; next is the split the new entry continues with.",
+  "about": "When the work changes after a running entry was split (SplitDrift). The Mac's Kit (SplitDriftVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases. Times are wall-clock times in timeZone; statedAt is when the entry's current split was set, and now is the moment it is checked. Projects and repositories are as in split-suggestions.json; ignored lists repositories on the ignore list. expected is null when nothing changed; next is the split the new entry continues with.",
   "timeZone": "Europe/Zagreb",
   "projects": {
     "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
@@ -193,6 +193,22 @@
         "at": "2026-09-14 09:20",
         "next": [{ "project": "atlas", "percent": 34}, { "project": "beacon", "percent": 33}, { "project": "copper", "percent": 33}]
       }
+    },
+    {
+      "name": "an ignored repository never joins, though it has a project",
+      "ignored": ["copper"],
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:10", "2026-09-14 09:25", "2026-09-14 09:45"] },
+        { "id": "b", "repository": "beacon", "touches": ["2026-09-14 09:05", "2026-09-14 09:15", "2026-09-14 09:35"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:20", "2026-09-14 09:30", "2026-09-14 09:40", "2026-09-14 09:50"] }
+      ],
+      "entry": {
+        "start": "2026-09-14 09:00",
+        "statedAt": "2026-09-14 09:00",
+        "now": "2026-09-14 10:00",
+        "parts": [{ "project": "atlas", "percent": 50 }, { "project": "beacon", "percent": 50 }]
+      },
+      "expected": null
     },
     {
       "name": "attention before the statement time doesn't count towards joining",

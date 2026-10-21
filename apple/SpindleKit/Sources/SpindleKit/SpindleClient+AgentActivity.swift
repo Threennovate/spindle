@@ -57,6 +57,22 @@ extension SpindleClient {
         }
     }
 
+    /// The repositories the person ignores, as the hashes their devices sent (`IgnoredRepositories.hash`).
+    public func ignoredRepositories() async throws -> [String] {
+        try await call { try await api.listIgnoredRepositories().ok.body.json }
+    }
+
+    /// Ignores a repository on all the person's devices, named by its hash alone. The server deletes what was uploaded
+    /// or linked for it.
+    public func ignoreRepository(hash: String) async throws {
+        try await call { _ = try await api.ignoreRepository(path: .init(hash: hash)).noContent }
+    }
+
+    /// Stops ignoring a repository on all the person's devices.
+    public func unignoreRepository(hash: String) async throws {
+        try await call { _ = try await api.unignoreRepository(path: .init(hash: hash)).noContent }
+    }
+
     /// Entries the person said not to suggest a split for, on any device, newest first.
     public func dismissedSplitSuggestions() async throws -> [String] {
         try await call { try await api.listSplitSuggestionDismissals().ok.body.json }

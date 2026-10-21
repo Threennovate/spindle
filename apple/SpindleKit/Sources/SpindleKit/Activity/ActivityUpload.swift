@@ -30,19 +30,21 @@ public struct AgentSessionUpload: Sendable, Equatable, Codable {
     /// The version of the log parser; a newer one reads logs differently, so everything is uploaded again.
     public static var parserVersion: Int { ActivityLedger.version }
 
-    public init(session: AgentSession, repository: ActivityRepository, titles: Bool) {
+    /// A session in a repository the person ignores (`ignored`) says only when its prompts were sent, which still end
+    /// the attention before them, as a folder outside git's do; a subagent's says nothing, so it isn't sent.
+    public init(session: AgentSession, repository: ActivityRepository, titles: Bool, ignored: Bool = false) {
         source = session.source
         sessionID = session.id
-        parentSessionID = session.parentID
+        parentSessionID = ignored ? nil : session.parentID
         // Within the server's limits, which count UTF-16 units, so one odd session can't hold up the rest.
-        self.repository = repository.identity.map { Repository(identity: $0, name: Self.limited(repository.name, to: 200)) }
+        self.repository = ignored ? nil : repository.identity.map { Repository(identity: $0, name: Self.limited(repository.name, to: 200)) }
         let title = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.title = titles && !title.isEmpty ? Self.limited(title, to: 200) : nil
-        branches = session.branches.filter { !$0.isEmpty && $0.utf16.count <= 255 }.sorted().prefix(50).map { $0 }
+        self.title = titles && !ignored && !title.isEmpty ? Self.limited(title, to: 200) : nil
+        branches = ignored ? [] : session.branches.filter { !$0.isEmpty && $0.utf16.count <= 255 }.sorted().prefix(50).map { $0 }
         let events = session.events.sorted { $0.date < $1.date }
-        touches = events.filter(\.isTouch).map { Self.milliseconds($0.date) }
+        touches = ignored && session.parentID != nil ? [] : events.filter(\.isTouch).map { Self.milliseconds($0.date) }
         var runs: [Run] = []
-        if let first = events.first {
+        if let first = events.first, !ignored {
             var start = first.date, end = first.date
             for event in events.dropFirst() {
                 if event.date.timeIntervalSince(end) > ActivityTimeline.runGap {
@@ -95,6 +97,8 @@ public actor ActivityUploader {
         var sources: Set<AgentSource>?
         /// When the last full look at the logs began; the next one reads only logs changed since.
         var scannedAt: Date?
+        /// The hashes of the repositories ignored then. Nil in state written before there was an ignore list.
+        var ignored: Set<String>?
         var sent: [String: String] = [:]
     }
 
@@ -116,7 +120,8 @@ public actor ActivityUploader {
         ActivityLedger.defaultDirectory?.deletingLastPathComponent().appending(path: "AgentActivityUploads.json")
     }
 
-    /// Uploads the sessions that changed. `sessions` reads the logs changed since a date; `send` uploads a batch and
+    /// Uploads the sessions that changed, those in repositories `ignoring` names as their prompts' times alone.
+    /// `sessions` reads the logs changed since a date; `send` uploads a batch and
     /// throws `ActivityUploadRejected` when the server refuses it as invalid. Then the batch's sessions go one at a
     /// time: a session still refused counts as handled until it changes, so one bad session never holds up the ones
     /// after it. Returns how many sessions went and how many were refused.
@@ -125,6 +130,7 @@ public actor ActivityUploader {
         syncedSince: Date,
         titles: Bool,
         sources: Set<AgentSource> = Set(AgentSource.allCases),
+        ignoring: IgnoredRepositories = .none,
         now: Date = Date(),
         sessions: @Sendable (Date) async throws -> [(session: AgentSession, repository: ActivityRepository)],
         send: @Sendable ([AgentSessionUpload]) async throws -> Void
@@ -136,13 +142,25 @@ public actor ActivityUploader {
         // skipped below.
         if !sources.isSubset(of: state.sources ?? [.claude, .codex]) { state.scannedAt = nil }
         state.sources = sources
+        // A repository ignored or no longer ignored since changes sessions older than the last look.
+        if (state.ignored ?? []) != ignoring.hashes { state.scannedAt = nil }
+        state.ignored = ignoring.hashes
         // A minute's overlap, for logs written while the last look was under way.
         let since = state.scannedAt.map { $0.addingTimeInterval(-60) } ?? now.addingTimeInterval(-Self.history)
-        let changed = try await sessions(since)
-            .map { AgentSessionUpload(session: $0.session, repository: $0.repository, titles: titles) }
+        var ignored: [String: Bool] = [:]
+        let read = try await sessions(since).map { item in
+            let key = item.repository.key
+            let isIgnored = ignored[key] ?? ignoring.contains(item.repository)
+            ignored[key] = isIgnored
+            return AgentSessionUpload(session: item.session, repository: item.repository, titles: titles, ignored: isIgnored)
+        }
+        // A session with nothing to say isn't sent. One that was (before its repository was ignored, after which the
+        // server deleted it) has to be sent again once it says something.
+        for session in read where session.touches.isEmpty && session.runs.isEmpty { state.sent[session.sessionID] = nil }
+        let changed = read
             .filter { !$0.touches.isEmpty || !$0.runs.isEmpty }
             .filter { state.sent[$0.sessionID] != $0.fingerprint }
-            .sorted { ($0.runs.first?.start ?? 0) < ($1.runs.first?.start ?? 0) }
+            .sorted { ($0.runs.first?.start ?? $0.touches.first ?? 0) < ($1.runs.first?.start ?? $1.touches.first ?? 0) }
         var sent = 0, rejected = 0
         for start in stride(from: 0, to: changed.count, by: Self.batchSize) {
             let batch = Array(changed[start..<min(start + Self.batchSize, changed.count)])

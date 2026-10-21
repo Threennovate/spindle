@@ -26,6 +26,7 @@ import Testing
         struct Expected: Decodable { let quiet: [String]?; let joined: String?; let at: String; let next: [Part] }
         let name: String
         let chosen: [String: String]?
+        let ignored: [String]?
         let sessions: [Session]
         let entry: Entry
         let expected: Expected?
@@ -58,7 +59,11 @@ import Testing
     static func id(_ key: String) -> String { vectors.projects[key]!.id! }
     static func key(_ id: String) -> String { vectors.projects.first { $0.value.id == id }!.key }
 
-    static func days(_ sessions: [Session], from start: Date, to end: Date) -> [ActivityDay] {
+    static func days(_ sessions: [Session], from start: Date, to end: Date, ignored: [String]? = nil) -> [ActivityDay] {
+        let account = "0c000000-0000-4000-8000-000000000001"
+        let ignoring = IgnoredRepositories(account: account, hashes: Set((ignored ?? []).map {
+            IgnoredRepositories.hash(vectors.repositories[$0]!.identity!, account: account)
+        }))
         let parsed = sessions.map { session in
             AgentSession(id: session.id, source: .claude, parentID: nil, cwd: session.repository.map { "/code/\($0)" } ?? "/tmp/\(session.id)",
                          title: "", branches: [], events: session.touches.map { AgentEvent(date: local($0), isTouch: true) })
@@ -71,7 +76,7 @@ import Testing
             return ActivityRepository(key: cwd, name: key, identity: nil)
         }
         return Set([time.day(of: start), time.day(of: end)]).sorted().map {
-            ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository)
+            ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository, ignoring: ignoring.contains)
         }
     }
 
@@ -84,7 +89,7 @@ import Testing
 
         let drift = SplitDrift.detect(
             parts: parts.compactMap(\.projectId), from: start, statedAt: Self.local(vector.entry.statedAt), now: now,
-            activity: Self.days(vector.sessions, from: start, to: now)) { links.project(for: $0, among: Self.projects) }
+            activity: Self.days(vector.sessions, from: start, to: now, ignored: vector.ignored)) { links.project(for: $0, among: Self.projects) }
 
         guard let expected = vector.expected else {
             #expect(drift == nil)

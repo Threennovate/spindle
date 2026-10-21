@@ -33,6 +33,7 @@ import Testing
 
     struct StretchCase: Decodable, CustomTestStringConvertible {
         let name: String
+        let ignored: [String]?
         let day: String
         let now: String
         let sessions: [Session]
@@ -95,7 +96,11 @@ import Testing
     static func key(_ id: String) -> String { vectors.projects.first { $0.value.id == id }!.key }
 
     /// The attention of the days the sessions' prompts are on, and the day after, as the loader keeps them.
-    static func attention(_ sessions: [Session]) -> [AttentionSegment] {
+    static func attention(_ sessions: [Session], ignored: [String]? = nil) -> [AttentionSegment] {
+        let account = "0c000000-0000-4000-8000-000000000001"
+        let ignoring = IgnoredRepositories(account: account, hashes: Set((ignored ?? []).map {
+            IgnoredRepositories.hash(vectors.repositories[$0]!.identity!, account: account)
+        }))
         let parsed = sessions.map { session in
             AgentSession(id: session.id, source: .claude, parentID: nil, cwd: session.repository.map { "/code/\($0)" } ?? "/tmp/\(session.id)",
                          title: "", branches: [], events: session.touches.map { AgentEvent(date: local($0), isTouch: true) })
@@ -108,7 +113,9 @@ import Testing
             return ActivityRepository(key: cwd, name: key, identity: nil)
         }
         let days = Set(sessions.flatMap(\.touches).map { time.day(of: local($0)) })
-        return days.sorted().flatMap { ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository).attention }
+        return days.sorted().flatMap {
+            ActivityTimeline.build(sessions: parsed, day: $0, time: time, repository: repository, ignoring: ignoring.contains).attention
+        }
     }
 
     static func covered(_ ranges: [[String]]) -> [DateInterval] {
@@ -125,7 +132,7 @@ import Testing
     func findsTheStretchesWindowsFinds(_ vector: StretchCase) {
         let day = DayKey(vector.day)!
         let bounds = DateInterval(start: Self.time.start(of: day), end: Self.time.start(of: Self.time.adding(1, to: day)))
-        let found = UntrackedActivity.stretches(attention: Self.attention(vector.sessions), covered: Self.covered(vector.covered), within: bounds,
+        let found = UntrackedActivity.stretches(attention: Self.attention(vector.sessions, ignored: vector.ignored), covered: Self.covered(vector.covered), within: bounds,
                                                 now: Self.local(vector.now), project: Self.project)
         #expect(found.map(Self.found) == vector.expected)
     }

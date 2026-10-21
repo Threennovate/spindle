@@ -1,5 +1,5 @@
 {
-  "about": "Agent attention nobody tracked (UntrackedActivity): the stretches the calendar and the day's review show, where a timer could have started (earlierStart, \"Start at 9:12?\"), and the work going on with no timer that the reminder to track names (ongoing). The Mac's Kit (UntrackedActivityVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases; the server's UntrackedActivity.cs has the same stretch rules. Times are wall-clock times in timeZone. covered is the time entries (and proposals waiting) take. Projects and repositories are as in split-suggestions.json, linked as chosen says; zeta has no project. unlinked is minutes of attention in repositories without a project. expected is null when there is nothing to offer.",
+  "about": "Agent attention nobody tracked (UntrackedActivity): the stretches the calendar and the day's review show, where a timer could have started (earlierStart, \"Start at 9:12?\"), and the work going on with no timer that the reminder to track names (ongoing). The Mac's Kit (UntrackedActivityVectorTests.swift) and the Windows app (Spindle.Activity.Tests) both run these cases; the server's UntrackedActivity.cs has the same stretch rules. Times are wall-clock times in timeZone. covered is the time entries (and proposals waiting) take. Projects and repositories are as in split-suggestions.json, linked as chosen says; zeta has no project, and ignored lists repositories on the ignore list. unlinked is minutes of attention in repositories without a project. expected is null when there is nothing to offer.",
   "timeZone": "Europe/Zagreb",
   "projects": {
     "atlas": { "id": "0a000000-0000-4000-8000-000000000001", "name": "Atlas" },
@@ -65,6 +65,18 @@
       "sessions": [{ "id": "z", "repository": "zeta", "touches": ["2026-09-14 14:00", "2026-09-14 14:10"] }],
       "covered": [],
       "expected": [{ "start": "2026-09-14 14:00", "end": "2026-09-14 14:25", "projects": [], "unlinked": 25 }]
+    },
+    {
+      "name": "an ignored repository is no time nobody tracked, and its prompts end the attention before them",
+      "ignored": ["copper"],
+      "day": "2026-09-14",
+      "now": "2026-09-14 23:00",
+      "sessions": [
+        { "id": "a", "repository": "atlas", "touches": ["2026-09-14 09:00", "2026-09-14 09:06"] },
+        { "id": "c", "repository": "copper", "touches": ["2026-09-14 09:10", "2026-09-14 09:20", "2026-09-14 09:30"] }
+      ],
+      "covered": [],
+      "expected": [{ "start": "2026-09-14 09:00", "end": "2026-09-14 09:10", "projects": ["atlas"], "unlinked": 0 }]
     }
   ],
   "earlierStart": [
