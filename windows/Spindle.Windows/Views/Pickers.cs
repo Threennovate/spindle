@@ -154,7 +154,8 @@ internal static class ProjectPicker
         Func<Guid?, Guid?, bool>? taken = null,
         bool choosingAnew = false,
         string placeholder = "Search projects, tasks or clients",
-        Func<Task>? onSplit = null)
+        Func<Task>? onSplit = null,
+        Func<Task>? onIgnore = null)
     {
         taken ??= (_, _) => false;
         PickerList? picker = null;
@@ -184,6 +185,13 @@ internal static class ProjectPicker
             }
             if (Matches("No project") && !taken(null, null))
                 rows.Add(new PickerRow("none", IconRow("IconFolder", Ui.Text("No project", "secondary"), true), projectId is null && !choosingAnew, () => Choose(null, null)));
+            // Choosing a project for a repository: ignoring it instead sits beside "No project".
+            if (onIgnore is not null && Matches("Ignore repository"))
+                rows.Add(new PickerRow("ignore", IconRow("IconEyeOff", Ui.Text("Ignore repository", "secondary"), true), false, async () =>
+                {
+                    picker!.Close();
+                    await onIgnore();
+                }));
             foreach (var group in owner.Catalog.ProjectGroups(projectId))
             {
                 var clientName = group.Client?.Name ?? "";

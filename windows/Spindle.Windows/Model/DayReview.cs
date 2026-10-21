@@ -371,7 +371,7 @@ public sealed partial class SplitAdvisor
 
     /// <summary>The activity read for these days, for the days a review covers.</summary>
     public IReadOnlyList<AttentionSegment> Attention(IEnumerable<DateOnly> wanted) =>
-        wanted.Distinct().SelectMany(d => days.TryGetValue(d, out var read) ? read.Snapshot.Attention : []).Distinct().ToList();
+        wanted.Distinct().SelectMany(d => days.TryGetValue(d, out var read) ? read.Snapshot.Evidence : []).Distinct().ToList();
 
     /// <summary>Where a stretch of attention's work goes: a branch rule's project and task, else its repository's project.</summary>
     public Func<AttentionSegment, SplitPlacement?> Placing()

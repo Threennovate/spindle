@@ -210,6 +210,56 @@ public sealed class BranchRulesTests
     }
 
     [Fact]
+    public async Task IgnoringARepositoryLeavesItOutGoesAsAHashAndUndoBringsItsLinkBack()
+    {
+        await using var session = HeadlessUnitTestSession.StartNew(typeof(HeadlessApp));
+        await session.Dispatch(async () =>
+        {
+            using var logs = new AgentLogs();
+            using var fixture = new ApiFixture { Projects = Projects() };
+            fixture.RepositoryLinks = Links(fixture, rules: false);
+            var elsewhere = new string('0', 64);
+            fixture.Ignored.Add(elsewhere);
+            var window = await Window(fixture);
+            var (atlas, beacon) = (fixture.Projects[0], fixture.Projects[1]);
+            var repository = window.Splits.Repository(Beacon);
+            var hash = IgnoredRepositories.Hash(Beacon, fixture.UserId.ToString("D"));
+            Assert.Contains(window.Splits.Suggestion(At(9), At(11.5), atlas.Id)!.Parts, p => p.Target.ProjectId == beacon.Id);
+
+            await RepositoryLinkButton.IgnoreAsync(window, repository);
+
+            // Only its hash goes; nothing of it shows, and its link is gone here as on the server.
+            await WaitFor(() => window.Notices.Current == "Ignored beacon");
+            Assert.Contains(fixture.Writes, w => w.Method == HttpMethod.Put && w.Path == $"/api/me/agent-activity/ignored/{hash}");
+            Assert.True(window.Splits.IsIgnored(repository));
+            Assert.Null(window.Splits.Chosen(repository));
+            await window.Splits.LoadAsync([AgentLogs.Day]);
+            Assert.DoesNotContain(window.Splits.Day(AgentLogs.Day)!.Attention, a => a.Repository?.Identity == Beacon);
+            Assert.DoesNotContain(window.Splits.Day(AgentLogs.Day)!.Runs, r => r.Repository?.Identity == Beacon);
+            Assert.NotEmpty(window.Splits.Day(AgentLogs.Day)!.Ignored);
+            Assert.DoesNotContain(window.Splits.Suggestion(At(9), At(11.5), atlas.Id)?.Parts ?? [], p => p.Target.ProjectId == beacon.Id);
+
+            await Click(window, "Settings");
+            var settings = Controls<SettingsView>(window).Single();
+            await WaitFor(() => Controls<Grid>(settings).Count(g => g.Name == "IgnoredRepository") == 2);
+            Assert.DoesNotContain(Controls<Grid>(settings), g => g.Name == "LinkedRepository" && Controls<TextBlock>(g).Any(t => t.Text == "beacon"));
+            Assert.Equal(["beacon", "A repository ignored on another device"],
+                Controls<Grid>(settings).Where(g => g.Name == "IgnoredRepository").Select(g => Controls<TextBlock>(g).First().Text));
+
+            // Undo stops ignoring it and links it to its project again.
+            await ClickNamed(window, "NoticeAction");
+            await WaitFor(() => window.Splits.ProjectOf(repository) == beacon.Id);
+            Assert.False(window.Splits.IsIgnored(repository));
+            Assert.Contains(fixture.Writes, w => w.Method == HttpMethod.Delete && w.Path == $"/api/me/agent-activity/ignored/{hash}");
+            Assert.Equal([elsewhere], fixture.Ignored);
+            await window.Splits.LoadAsync([AgentLogs.Day]);
+            Assert.Contains(window.Splits.Suggestion(At(9), At(11.5), atlas.Id)!.Parts, p => p.Target.ProjectId == beacon.Id);
+            window.Quit();
+            return 0;
+        }, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task TheSuggestionBannerOpensBranchRulesOverTheEditorAndBringsItBack()
     {
         await using var session = HeadlessUnitTestSession.StartNew(typeof(HeadlessApp));

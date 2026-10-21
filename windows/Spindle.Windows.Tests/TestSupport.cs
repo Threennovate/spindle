@@ -135,6 +135,8 @@ internal sealed class ApiFixture : HttpMessageHandler
     public ClientResponse[] Clients { get; set; }
     public ProjectResponse[] Projects { get; set; }
     public RepositoryLinkResponse[] RepositoryLinks { get; set; } = [];
+    /// <summary>The hashes of the repositories the account ignores, as /api/me/agent-activity/ignored keeps them.</summary>
+    public List<string> Ignored { get; } = [];
     public TagResponse[] Tags { get; set; } = [];
     public WorkspaceSettingsResponse Settings { get; set; } = new() { Name = "Test workspace", Currency = "EUR" };
     public OrganizationAccess Access { get; set; } = OrganizationAccess.Full;
@@ -185,6 +187,15 @@ internal sealed class ApiFixture : HttpMessageHandler
         Assert.Equal("test-token", request.Headers.Authorization?.Parameter);
         var path = request.RequestUri.AbsolutePath;
         if (path.Contains("/agent-proposals", StringComparison.Ordinal)) return await ProposalsAsync(request, path, cancellationToken);
+        if (path == "/api/me/agent-activity/ignored") return Json(Ignored.ToArray());
+        if (path.StartsWith("/api/me/agent-activity/ignored/", StringComparison.Ordinal))
+        {
+            var hash = path.Split('/')[^1];
+            Writes.Add(new(request.Method, path, ""));
+            if (request.Method == HttpMethod.Delete) Ignored.Remove(hash);
+            else if (!Ignored.Contains(hash)) Ignored.Add(hash);
+            return new(HttpStatusCode.NoContent);
+        }
         if (request.Method == HttpMethod.Get)
         {
             if (path == "/api/me") return Json(new MeResponse

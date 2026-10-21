@@ -393,7 +393,8 @@ public sealed class DayReviewView : UserControl
                     {
                         if (project is { } chosen) await owner.Splits.LinkAsync(repository, chosen);
                         else await RepositoryLinkButton.UnlinkAsync(owner, repository);
-                    }, choosingAnew: true, placeholder: $"Which project is {repository.Name} for?"));
+                    }, choosingAnew: true, placeholder: $"Which project is {repository.Name} for?",
+                    onIgnore: () => RepositoryLinkButton.IgnoreAsync(owner, repository)));
                     stack.Children.Add(link);
                 }
                 break;

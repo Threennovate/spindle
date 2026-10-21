@@ -168,6 +168,7 @@ public sealed class SettingsView : UserControl, ILivePage
             Card("IconAlert", "Remind me to review the day", "Once, after your working hours, when the day has splits or untracked agent time waiting.", DayReviewSwitch()),
             Card("IconCalendarLtr", "Last week in the logs", "What the last 7 days of logs found in your tracked time, and the repositories to link to projects.", LogsFound()),
             LinkedRepositories(),
+            IgnoredRepositories(),
             Card("IconCalendarLtr", "Agent activity in the calendar", $"Your focus and agent runs from {AgentLogFormat.Names}, beside your entries.",
                 Switch(Preferences.ShowAgentActivity, value => Save(p => p with { ShowAgentActivity = value }), "ShowAgentActivity")),
             owner.Me is null ? null : ActivitySyncCards(),
@@ -209,21 +210,57 @@ public sealed class SettingsView : UserControl, ILivePage
                 link.ProjectId is null ? null : BranchRulesButton.Create(owner, link.Repository, @short: true, saved: Render).Centered());
             row.Margin = new Thickness(0, 6);
             row.Background = Avalonia.Media.Brushes.Transparent;
+            var repository = link.Repository;
+            var menu = new MenuFlyout();
             if (link.ProjectId is not null)
             {
                 var unlink = new MenuItem { Header = "Unlink", Icon = Ui.Icon("IconDismiss") }.Named("UnlinkRepository");
-                var repository = link.Repository;
                 unlink.Click += async (_, _) =>
                 {
                     await RepositoryLinkButton.UnlinkAsync(owner, repository);
                     Render();
                 };
-                row.ContextFlyout = new MenuFlyout { Items = { unlink } };
+                menu.Items.Add(unlink);
             }
+            var ignore = new MenuItem { Header = "Ignore repository", Icon = Ui.Icon("IconEyeOff") }.Named("IgnoreRepository");
+            ignore.Click += async (_, _) =>
+            {
+                await RepositoryLinkButton.IgnoreAsync(owner, repository);
+                Render();
+            };
+            menu.Items.Add(ignore);
+            row.ContextFlyout = menu;
             list.Children.Add(row.Named("LinkedRepository"));
         }
         if (linked.Count == 0) list.Children.Add(Ui.Wrapped("None yet. Choose a project for a repository in a suggestion, or in “Show what the logs found…”.", "caption", "secondary"));
-        return Card("IconLink", "Linked repositories", "Where each repository's agent work goes; No project unlinks it. Branch rules send some branches to another project, e.g. a client's.", null, list);
+        return Card("IconLink", "Linked repositories", "Where each repository's agent work goes; No project unlinks it, and Ignore repository leaves its work out of Spindle. Branch rules send some branches to another project, e.g. a client's.", null, list);
+    }
+
+    /// <summary>
+    /// The repositories the person ignores, on all their devices, to stop ignoring one. The account has only hashes, so
+    /// one ignored on another device and never seen on this PC has no name.
+    /// </summary>
+    private Control? IgnoredRepositories()
+    {
+        if (!Preferences.AgentLogsEnabled || owner.Workspace is null) return null;
+        var ignored = owner.Splits.IgnoredList();
+        if (ignored.Count == 0) return null;
+        var list = Ui.Stack(0);
+        foreach (var (hash, name) in ignored)
+        {
+            if (list.Children.Count > 0) list.Children.Add(Ui.Divider());
+            var label = name is null ? Ui.Text("A repository ignored on another device", "secondary") : Ui.Text(name, "medium");
+            label.TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis;
+            var stop = Ui.Button("Stop ignoring", async () =>
+            {
+                await owner.Splits.UnignoreAsync(hash);
+                Render();
+            }, owner.Notify).Named("StopIgnoring").Spoken($"Stop ignoring {name ?? "this repository"}");
+            var row = Ui.Columns("*,Auto", 10, label.Centered(), stop.Centered());
+            row.Margin = new Thickness(0, 6);
+            list.Children.Add(row.Named("IgnoredRepository"));
+        }
+        return Card("IconEyeOff", "Ignored repositories", "Their agent work shows nowhere and is never uploaded; their prompts only end the time before them. The logs stay as they are, so it comes back when you stop ignoring one. Your account keeps only a fingerprint of each, never its name.", null, list);
     }
 
     /// <summary>Uploading agent activity to the account, so the web and the server's MCP see it too. An account setting, on every device.</summary>

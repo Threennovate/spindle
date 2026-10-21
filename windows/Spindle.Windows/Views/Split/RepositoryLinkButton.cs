@@ -34,8 +34,29 @@ internal static class RepositoryLinkButton
                 }
                 else if (!owner.Splits.IsNoProject(repository)) await UnlinkAsync(owner, repository);
                 changed();
-            }, taken: (_, task) => task is not null, placeholder: $"Which project is {repository.Name} for?"));
+            }, taken: (_, task) => task is not null, placeholder: $"Which project is {repository.Name} for?",
+            onIgnore: async () =>
+            {
+                await IgnoreAsync(owner, repository);
+                changed();
+            }));
         return button;
+    }
+
+    /// <summary>
+    /// Ignores a repository on every device, with Undo, which brings back its link too: none of its agent work shows
+    /// in Spindle or is uploaded, and the account keeps only its hash.
+    /// </summary>
+    public static async Task IgnoreAsync(MainWindow owner, AgentRepository repository)
+    {
+        var before = owner.Splits.ChoiceOf(repository);
+        if (await owner.Splits.IgnoreAsync(repository) is not { } hash) return;
+        async Task Undo()
+        {
+            await owner.Splits.UnignoreAsync(hash);
+            if (before != Model.RepositoryChoice.Forgotten) await owner.Splits.ChooseAsync(repository, before);
+        }
+        owner.Notices.Show($"Ignored {repository.Name}", NoticeKind.Success, ("Undo", Undo));
     }
 
     /// <summary>Unlinks a repository, with Undo putting back what it had: its project and branch rules, or nothing chosen.</summary>

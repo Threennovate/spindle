@@ -27,6 +27,8 @@ public sealed class AgentLogsOnboarding : UserControl
     private readonly DateOnly today;
     /// <summary>The project chosen for each repository, by its identity; null for none.</summary>
     private readonly Dictionary<string, Guid?> choices = [];
+    /// <summary>The repositories chosen to be ignored here, by identity.</summary>
+    private readonly HashSet<string> ignoring = [];
     private Findings? findings;
 
     /// <summary>What the logs found, worked out once they are read.</summary>
@@ -208,12 +210,14 @@ public sealed class AgentLogsOnboarding : UserControl
         }
         var bar = new Border { Height = 4, Width = Math.Max(4, 120d * found.Attention / most), CornerRadius = new CornerRadius(2), Background = Ui.ProjectBrush(color, 0.7), HorizontalAlignment = HorizontalAlignment.Left };
         var amount = Ui.Row(8, new Border { Width = 120, Child = bar }.Centered(), Ui.Text(Durations.HoursMinutes(found.Attention / 1000d), "caption", "secondary", "mono"));
-        var picker = new ComboBox { Width = 180, ItemsSource = new[] { "No project" }.Concat(projects.Select(p => p.Name)).ToArray(), Name = "RepositoryProject" }
+        var picker = new ComboBox { Width = 180, ItemsSource = new[] { "No project", "Ignore repository" }.Concat(projects.Select(p => p.Name)).ToArray(), Name = "RepositoryProject" }
             .Spoken($"Project for {repository.Name}");
-        picker.SelectedIndex = choice is { } id ? Array.FindIndex(projects, p => p.Id == id) + 1 : 0;
+        picker.SelectedIndex = ignoring.Contains(repository.Identity) ? 1 : choice is { } id ? Array.FindIndex(projects, p => p.Id == id) + 2 : 0;
         picker.SelectionChanged += (_, _) =>
         {
-            choices[repository.Identity] = picker.SelectedIndex > 0 ? projects[picker.SelectedIndex - 1].Id : null;
+            if (picker.SelectedIndex == 1) ignoring.Add(repository.Identity);
+            else ignoring.Remove(repository.Identity);
+            choices[repository.Identity] = picker.SelectedIndex > 1 ? projects[picker.SelectedIndex - 2].Id : null;
             Render();
         };
         // A repository whose branches belong to different projects, e.g. a monorepo; saving its rules links it too.
@@ -283,9 +287,16 @@ public sealed class AgentLogsOnboarding : UserControl
             case Step.Link:
                 buttons.Children.Add(Ui.Button("Back", () => Go(Step.Found)));
                 var changed = ChangedLinks();
-                buttons.Children.Add(Ui.Button(changed.Count == 0 ? "Next" : changed.Count == 1 ? "Link 1 repository" : $"Link {changed.Count} repositories", async () =>
+                var ignored = findings?.Repositories.Select(f => f.Repository).Where(r => ignoring.Contains(r.Identity)).ToList() ?? [];
+                var saving = changed.Count + ignored.Count;
+                var title = ignored.Count > 0 ? saving == 1 ? "Save 1 repository" : $"Save {saving} repositories"
+                    : saving == 0 ? "Next" : saving == 1 ? "Link 1 repository" : $"Link {saving} repositories";
+                buttons.Children.Add(Ui.Button(title, async () =>
                 {
                     foreach (var (repository, projectId) in changed) await owner.Splits.LinkAsync(repository, projectId);
+                    foreach (var repository in ignored) await owner.Splits.IgnoreAsync(repository);
+                    // The days read so far had them; the review reads them again without.
+                    if (ignored.Count > 0) await owner.Desktop.LoadReviewAsync(Week);
                     Go(Step.Review);
                 }, owner.Notify, "primary").Named("OnboardingLink"));
                 break;
@@ -308,6 +319,6 @@ public sealed class AgentLogsOnboarding : UserControl
     /// <summary>The repositories whose project was chosen here, and differs from the person's own link.</summary>
     private List<(AgentRepository Repository, Guid ProjectId)> ChangedLinks() =>
         findings is null ? [] : findings.Repositories
-            .Where(f => choices.GetValueOrDefault(f.Repository.Identity) is { } id && owner.Splits.Chosen(f.Repository) != id)
+            .Where(f => !ignoring.Contains(f.Repository.Identity) && choices.GetValueOrDefault(f.Repository.Identity) is { } id && owner.Splits.Chosen(f.Repository) != id)
             .Select(f => (f.Repository, choices[f.Repository.Identity]!.Value)).ToList();
 }
