@@ -10076,6 +10076,16 @@
               "null",
               "boolean"
             ]
+          },
+          "newWorkspace": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NewWorkspaceResponse"
+              }
+            ]
           }
         }
       },
@@ -10118,6 +10128,32 @@
           },
           "challengeToken": {
             "type": "string"
+          }
+        }
+      },
+      "NewWorkspaceResponse": {
+        "required": [
+          "allowed",
+          "organizationId"
+        ],
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "organizationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "trialDays": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },

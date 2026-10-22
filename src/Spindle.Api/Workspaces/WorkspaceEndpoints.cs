@@ -43,39 +43,27 @@ internal static class WorkspaceEndpoints
     }
 
     /// <summary>
-    /// Creates a workspace in the organization of the caller's current workspace, which the caller must own or
-    /// administer. The caller becomes its admin and switches to it.
+    /// Creates a workspace where <see cref="NewWorkspaceResponse"/> says: in the organization of the caller's current
+    /// workspace or another one they own or administer, or else in a new organization of their own. The caller becomes
+    /// its admin and switches to it.
     /// </summary>
     private static async Task<Results<Created<WorkspaceSummary>, ProblemHttpResult>> CreateAsync(
         CreateWorkspaceRequest request,
         ClaimsPrincipal principal,
         AppDbContext db,
+        NewWorkspaces newWorkspaces,
         CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId();
         var user = await db.Users.SingleAsync(u => u.Id == userId, cancellationToken);
-        var currentOrganizationId = await db.Workspaces
-            .Where(w => w.Id == user.DefaultWorkspaceId)
-            .Select(w => (Guid?)w.OrganizationId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        var managed = await db.OrganizationMembers
-            .Where(m => m.UserId == userId && (m.Role == OrganizationRole.Owner || m.Role == OrganizationRole.Admin))
-            .Select(m => m.OrganizationId)
-            .ToListAsync(cancellationToken);
-        if (managed.Count == 0)
+        var workspace = await newWorkspaces.CreateAsync(user, request.Name, cancellationToken);
+        if (workspace is null)
         {
-            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only organization owners and admins can create workspaces.");
+            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only organization owners and admins can create workspaces on this server.");
         }
 
-        var organizationId = currentOrganizationId is { } current && managed.Contains(current) ? current : managed[0];
-        var workspace = Workspace.Create(organizationId, request.Name);
-        db.Workspaces.Add(workspace);
-        db.WorkspaceMembers.Add(WorkspaceMember.Create(workspace.Id, userId, WorkspaceRole.Admin));
-        user.DefaultWorkspaceId = workspace.Id;
         await db.SaveChangesAsync(cancellationToken);
-
-        return TypedResults.Created((string?)null, new WorkspaceSummary(workspace.Id, organizationId, workspace.Name, WorkspaceRole.Admin));
+        return TypedResults.Created((string?)null, workspace);
     }
 
     /// <summary>Switches the workspace the user works in, on every device.</summary>

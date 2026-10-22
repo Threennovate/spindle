@@ -147,10 +147,29 @@ final class AppModel {
         return me.workspaces.first { $0.id == me.defaultWorkspaceId } ?? me.workspaces.first
     }
 
-    /// Owners and admins of the current workspace's organization can create more workspaces.
+    /// Whether the person may create a workspace, as the server says. A server from before it said nothing let owners
+    /// and admins of the current workspace's organization create them.
     var canCreateWorkspaces: Bool {
         guard let me, let workspace else { return false }
-        return me.organizations.contains { $0.id == workspace.organizationId && $0.role != .member }
+        return me.newWorkspace?.allowed ?? me.organizations.contains { $0.id == workspace.organizationId && $0.role != .member }
+    }
+
+    /// Says what a new workspace is and where it goes, before the person creates it.
+    var newWorkspaceDescription: String {
+        let space = "its own projects, clients, tags and team"
+        let target = me?.newWorkspace
+        let current = me?.organizations.first { $0.id == workspace?.organizationId }?.name
+        if let target, target.allowed, target.organizationId == nil {
+            let apart = current.map { "A space of your own, apart from \($0), with \(space)." } ?? "A space of your own, with \(space)."
+            guard let days = target.trialDays else { return "\(apart) You own it and can invite people to it." }
+            let plan = current.map { "It's not on \($0)'s plan: it" } ?? "It"
+            return "\(apart) \(plan) starts its own \(days)-day free trial."
+        }
+        if let id = target?.organizationId, id != workspace?.organizationId,
+           let elsewhere = me?.organizations.first(where: { $0.id == id })?.name {
+            return "A separate space in \(elsewhere), with \(space). You become its admin."
+        }
+        return "A separate space with \(space). You become its admin."
     }
 
     var isWorkspaceAdmin: Bool {

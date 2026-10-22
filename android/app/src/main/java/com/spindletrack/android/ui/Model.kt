@@ -172,7 +172,27 @@ val AppState.isAdmin: Boolean get() = me?.workspaces?.find { it.id == workspaceI
 fun workspaceAdmin(state: AppState): Boolean = state.isAdmin
 val AppState.canCreateProjects: Boolean get() = isAdmin || settings?.onlyAdminsCreateProjects == false
 val AppState.canCreateTags: Boolean get() = isAdmin || settings?.onlyAdminsCreateTags == false
-val AppState.canCreateWorkspaces: Boolean get() = me?.organizations?.any { it.role == "owner" || it.role == "admin" } == true
+/** As the server says; a server from before it said nothing let owners and admins of the current workspace's organization create them. */
+val AppState.canCreateWorkspaces: Boolean get() {
+    val me = me ?: return false
+    val organizationId = me.workspaces.find { it.id == workspaceId }?.organizationId
+    return me.newWorkspace?.allowed ?: me.organizations.any { it.id == organizationId && it.role != "member" }
+}
+
+/** Says what a new workspace is and where it goes, before the person creates it. */
+val AppState.newWorkspaceDescription: String get() {
+    val space = "its own projects, clients, tags and team"
+    val target = me?.newWorkspace
+    val organizationId = me?.workspaces?.find { it.id == workspaceId }?.organizationId
+    val current = me?.organizations?.find { it.id == organizationId }?.name
+    if (target != null && target.allowed && target.organizationId == null) {
+        val apart = if (current != null) "A space of your own, apart from $current, with $space." else "A space of your own, with $space."
+        val days = target.trialDays ?: return "$apart You own it and can invite people to it."
+        return "$apart ${if (current != null) "It's not on $current's plan: it" else "It"} starts its own $days-day free trial."
+    }
+    val elsewhere = target?.organizationId?.takeIf { it != organizationId }?.let { id -> me?.organizations?.find { it.id == id }?.name }
+    return if (elsewhere != null) "A separate space in $elsewhere, with $space. You become its admin." else "A separate space with $space. You become its admin."
+}
 val AppState.lockedBefore: LocalDate? get() = settings?.lockedBefore?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
 /** Whether a day is locked for this person: before the workspace's lock date, unless they are an admin. */

@@ -4,9 +4,8 @@ using Microsoft.Extensions.Options;
 using Spindle.Api.Common;
 using Spindle.Api.Subscriptions;
 using Spindle.Api.Team;
+using Spindle.Api.Workspaces;
 using Spindle.Domain.Invitations;
-using Spindle.Domain.Organizations;
-using Spindle.Domain.Workspaces;
 using Spindle.Infrastructure.Identity;
 using Spindle.Infrastructure.Persistence;
 
@@ -48,7 +47,7 @@ internal sealed class AuthService(
     AccessTokenIssuer accessTokens,
     RefreshTokenService refreshTokens,
     InvitationService invitations,
-    OrganizationSubscriptions subscriptions,
+    NewWorkspaces newWorkspaces,
     AccountEmails emails,
     IOptions<AppOptions> app,
     IOptions<AuthOptions> auth,
@@ -150,15 +149,7 @@ internal sealed class AuthService(
 
             // Like Toggl, every new account starts with its own organization and workspace, and the organization with
             // its trial.
-            var organization = Organization.Create(fullName);
-            var workspace = Workspace.Create(organization.Id, fullName);
-            db.AddRange(
-                organization,
-                workspace,
-                OrganizationMember.Create(organization.Id, newUser.Id, OrganizationRole.Owner),
-                WorkspaceMember.Create(workspace.Id, newUser.Id, WorkspaceRole.Admin));
-            newUser.DefaultWorkspaceId = workspace.Id;
-            subscriptions.StartTrial(organization.Id);
+            newWorkspaces.StartOwnOrganization(newUser, fullName);
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

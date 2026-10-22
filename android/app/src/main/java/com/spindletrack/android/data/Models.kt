@@ -545,6 +545,7 @@ data class MeResponse(
     val `isOperator`: Boolean? = null,
     val `firstSteps`: Boolean? = null,
     val `hasPassword`: Boolean? = null,
+    val `newWorkspace`: NewWorkspaceResponse? = null,
 )
 
 @Serializable
@@ -558,6 +559,13 @@ data class NativePasskeyLoginRequest(
 data class NativePasskeyOptionsResponse(
     val `optionsJson`: String = "",
     val `challengeToken`: String = "",
+)
+
+@Serializable
+data class NewWorkspaceResponse(
+    val `allowed`: Boolean = false,
+    val `organizationId`: String? = null,
+    val `trialDays`: Int? = null,
 )
 
 @Serializable

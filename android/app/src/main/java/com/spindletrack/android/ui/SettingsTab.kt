@@ -151,7 +151,7 @@ fun SettingsTab(state: AppState) {
         }
     }
     if (naming) NameDialog(
-        "New workspace", "Workspace name", confirm = "Create", message = "A workspace of its own, in the same organization, with its own projects, clients and tags.",
+        "New workspace", "Workspace name", confirm = "Create", message = state.newWorkspaceDescription,
         onConfirm = { name -> app.launch { runCatching { app.repository.createWorkspace(name) }.onSuccess { app.notices.show("Workspace “$name” created") }.onFailure { app.notices.show(it, "Couldn't create the workspace.") } } },
         onDismiss = { naming = false },
     )

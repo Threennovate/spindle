@@ -94,7 +94,7 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Create") { createWorkspace() }
             } message: {
-                Text("A workspace of its own, in the same organization, with its own projects, clients and tags.")
+                Text(model.newWorkspaceDescription)
             }
         }
     }

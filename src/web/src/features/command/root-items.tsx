@@ -59,7 +59,7 @@ import { requestDescriptionFocus } from '../time-entries/focus'
 import { currentEntryQuery, recentEntriesQuery, suggestionsQuery } from '../time-entries/queries'
 import { equalPercents, isSplit, partsOf } from '../time-entries/split'
 import { useTimerActions } from '../time-entries/timer-actions'
-import { useWorkspace } from '../workspace'
+import { describeNewWorkspace, useWorkspace } from '../workspace'
 import { useCreateWorkspace, useSwitchWorkspace } from '../workspace-queries'
 import { namePage, projectPage, splitPage, startTimePage, tagsPage } from './palette-pages'
 import { usePalette } from './palette-context'
@@ -586,6 +586,7 @@ export function useRootItems(query: string): RootItems {
               title: 'New workspace',
               noun: 'workspace',
               placeholder: 'Workspace name, e.g. Consulting',
+              note: describeNewWorkspace(me, workspace),
               onCreate: async (name) => {
                 try {
                   await createWorkspace.mutateAsync(name)

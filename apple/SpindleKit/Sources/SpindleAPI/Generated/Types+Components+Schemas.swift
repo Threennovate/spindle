@@ -2341,6 +2341,8 @@ extension Components {
             public var firstSteps: Swift.Bool?
             /// - Remark: Generated from `#/components/schemas/MeResponse/hasPassword`.
             public var hasPassword: Swift.Bool?
+            /// - Remark: Generated from `#/components/schemas/MeResponse/newWorkspace`.
+            public var newWorkspace: Components.Schemas.NewWorkspaceResponse?
             /// Creates a new `MeResponse`.
             ///
             /// - Parameters:
@@ -2357,6 +2359,7 @@ extension Components {
             ///   - isOperator:
             ///   - firstSteps:
             ///   - hasPassword:
+            ///   - newWorkspace:
             public init(
                 id: Swift.String,
                 email: Swift.String,
@@ -2370,7 +2373,8 @@ extension Components {
                 agentActivity: Components.Schemas.AgentActivitySettingsResponse? = nil,
                 isOperator: Swift.Bool? = nil,
                 firstSteps: Swift.Bool? = nil,
-                hasPassword: Swift.Bool? = nil
+                hasPassword: Swift.Bool? = nil,
+                newWorkspace: Components.Schemas.NewWorkspaceResponse? = nil
             ) {
                 self.id = id
                 self.email = email
@@ -2385,6 +2389,7 @@ extension Components {
                 self.isOperator = isOperator
                 self.firstSteps = firstSteps
                 self.hasPassword = hasPassword
+                self.newWorkspace = newWorkspace
             }
             public enum CodingKeys: String, CodingKey {
                 case id
@@ -2400,6 +2405,7 @@ extension Components {
                 case isOperator
                 case firstSteps
                 case hasPassword
+                case newWorkspace
             }
         }
         /// - Remark: Generated from `#/components/schemas/NativePasskeyLoginRequest`.
@@ -2452,6 +2458,35 @@ extension Components {
             public enum CodingKeys: String, CodingKey {
                 case optionsJson
                 case challengeToken
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/NewWorkspaceResponse`.
+        public struct NewWorkspaceResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/NewWorkspaceResponse/allowed`.
+            public var allowed: Swift.Bool
+            /// - Remark: Generated from `#/components/schemas/NewWorkspaceResponse/organizationId`.
+            public var organizationId: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/NewWorkspaceResponse/trialDays`.
+            public var trialDays: Swift.Int32?
+            /// Creates a new `NewWorkspaceResponse`.
+            ///
+            /// - Parameters:
+            ///   - allowed:
+            ///   - organizationId:
+            ///   - trialDays:
+            public init(
+                allowed: Swift.Bool,
+                organizationId: Swift.String? = nil,
+                trialDays: Swift.Int32? = nil
+            ) {
+                self.allowed = allowed
+                self.organizationId = organizationId
+                self.trialDays = trialDays
+            }
+            public enum CodingKeys: String, CodingKey {
+                case allowed
+                case organizationId
+                case trialDays
             }
         }
         /// - Remark: Generated from `#/components/schemas/OAuthAuthorizationPreview`.

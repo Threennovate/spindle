@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useWorkspace } from '@/features/workspace'
+import { describeNewWorkspace, useWorkspace } from '@/features/workspace'
 import { useCreateWorkspace, useSwitchWorkspace } from '@/features/workspace-queries'
 import { errorMessage } from '@/lib/error-message'
 
@@ -71,7 +71,7 @@ export function WorkspaceSwitcher({ onSwitched }: { onSwitched?: () => void }) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New workspace</DialogTitle>
-            <DialogDescription>A separate space with its own projects, clients, tags and team. You become its admin.</DialogDescription>
+            <DialogDescription>{describeNewWorkspace(me, workspace)}</DialogDescription>
           </DialogHeader>
           <InlineNameForm
             label="Workspace name"

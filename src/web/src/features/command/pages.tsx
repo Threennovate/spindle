@@ -322,33 +322,42 @@ export interface NamePageOptions {
   title: string
   noun: string
   placeholder: string
+  /** What creating it means, when that needs saying. */
+  note?: string
   /** Creates it; returns an error to show, or nothing. */
   onCreate: (name: string) => Promise<string | null>
 }
 
-export function NamePage({ noun, onCreate, query }: NamePageOptions & { query: string }) {
+export function NamePage({ noun, note, onCreate, query }: NamePageOptions & { query: string }) {
   const typed = query.trim()
   if (!typed) {
-    return <PaletteNote>Type a name for the new {noun}, then press Enter.</PaletteNote>
+    return (
+      <PaletteNote>
+        Type a name for the new {noun}, then press Enter.{note && ` ${note}`}
+      </PaletteNote>
+    )
   }
   return (
-    <PaletteGroup>
-      <PaletteRow
-        item={{
-          id: `create:${noun}`,
-          section: 'create',
-          label: `Create ${noun} “${typed}”`,
-          icon: Plus,
-          primary: {
-            label: 'Create',
-            run: (palette) => {
-              palette.close()
-              void onCreate(typed)
+    <>
+      <PaletteGroup>
+        <PaletteRow
+          item={{
+            id: `create:${noun}`,
+            section: 'create',
+            label: `Create ${noun} “${typed}”`,
+            icon: Plus,
+            primary: {
+              label: 'Create',
+              run: (palette) => {
+                palette.close()
+                void onCreate(typed)
+              },
             },
-          },
-        }}
-      />
-    </PaletteGroup>
+          }}
+        />
+      </PaletteGroup>
+      {note && <PaletteNote>{note}</PaletteNote>}
+    </>
   )
 }
 
