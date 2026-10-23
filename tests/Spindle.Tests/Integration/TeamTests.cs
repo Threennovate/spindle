@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Spindle.Api.Me;
 using Spindle.Api.Team;
+using Spindle.Api.Workspaces;
 using Spindle.Domain.Invitations;
 using Spindle.Domain.Organizations;
 using Spindle.Domain.Workspaces;
@@ -204,14 +205,88 @@ public sealed class TeamTests(PostgresApiFactory factory)
         var created = await TestUser.ReadAsync<WorkspaceSummary>(await owner.Client.PostAsJsonAsync("/api/workspaces", new { name = "Second" }, Ct));
         var afterCreate = await owner.MeAsync();
         var switchBack = await owner.Client.PutAsJsonAsync("/api/me/default-workspace", new { workspaceId = owner.WorkspaceId }, Ct);
-        var memberCreates = await member.Client.PostAsJsonAsync("/api/workspaces", new { name = "Mine" }, Ct);
         var memberSwitchesToForeign = await member.Client.PutAsJsonAsync("/api/me/default-workspace", new { workspaceId = created.Id }, Ct);
 
         Assert.Equal(created.Id, afterCreate.DefaultWorkspaceId);
         Assert.Equal(2, afterCreate.Workspaces.Count);
         Assert.Equal(HttpStatusCode.NoContent, switchBack.StatusCode);
         Assert.Equal(owner.WorkspaceId, (await owner.MeAsync()).DefaultWorkspaceId);
-        Assert.Equal(HttpStatusCode.Forbidden, memberCreates.StatusCode);
         Assert.Equal(["workspaceId"], await TestUser.ErrorFieldsAsync(memberSwitchesToForeign));
+    }
+
+    [Fact]
+    public async Task A_member_creates_a_workspace_in_an_organization_of_their_own()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var team = Assert.Single((await owner.MeAsync()).Organizations);
+        var member = await factory.AddMemberAsync(owner, fullName: "Ana Horvat");
+        var offered = (await member.MeAsync()).NewWorkspace;
+
+        var created = await TestUser.ReadAsync<WorkspaceSummary>(await member.Client.PostAsJsonAsync("/api/workspaces", new { name = "Consulting" }, Ct));
+        var me = await member.MeAsync();
+        var another = await TestUser.ReadAsync<WorkspaceSummary>(await member.Client.PostAsJsonAsync("/api/workspaces", new { name = "Writing" }, Ct));
+
+        Assert.Equal(new NewWorkspaceResponse(true, null) { TrialDays = 90 }, offered);
+        var own = Assert.Single(me.Organizations, o => o.Id != team.Id);
+        Assert.Equal(("Ana Horvat", OrganizationRole.Owner), (own.Name, own.Role));
+        Assert.Equal(own.Id, created.OrganizationId);
+        Assert.Equal(WorkspaceRole.Admin, created.Role);
+        Assert.Equal(created.Id, me.DefaultWorkspaceId);
+        Assert.Equal(new NewWorkspaceResponse(true, own.Id), me.NewWorkspace);
+        // The team's organization stays as it was, and a second workspace goes in the organization they now own.
+        Assert.Equal(OrganizationRole.Member, Assert.Single(me.Organizations, o => o.Id == team.Id).Role);
+        Assert.Equal(own.Id, another.OrganizationId);
+        Assert.Equal(2, (await member.MeAsync()).Organizations.Count);
+    }
+
+    [Fact]
+    public async Task A_member_creating_workspaces_at_once_starts_one_organization_of_their_own()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var member = await factory.AddMemberAsync(owner);
+
+        var responses = await Task.WhenAll(Enumerable.Range(1, 4).Select(i => member.Client.PostAsJsonAsync("/api/workspaces", new { name = $"Mine {i}" }, Ct)));
+        var created = await Task.WhenAll(responses.Select(TestUser.ReadAsync<WorkspaceSummary>));
+
+        var own = Assert.Single((await member.MeAsync()).Organizations, o => o.Role == OrganizationRole.Owner);
+        Assert.All(created, workspace => Assert.Equal(own.Id, workspace.OrganizationId));
+        Assert.Equal(2, (await member.MeAsync()).Organizations.Count);
+    }
+
+    [Fact]
+    public async Task An_owner_working_in_another_organization_creates_workspaces_in_their_own()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var other = await TestUser.RegisterAsync(factory);
+        var ownOrganization = Assert.Single((await other.MeAsync()).Organizations).Id;
+        (await owner.PostAsync("/invitations", new { email = other.Email })).EnsureSuccessStatusCode();
+        (await other.Client.PostAsync($"/api/invitations/{CapturingEmailSender.InvitationToken(factory.Emails.LastTo(other.Email))}/accept", null, Ct)).EnsureSuccessStatusCode();
+        (await other.Client.PutAsJsonAsync("/api/me/default-workspace", new { workspaceId = owner.WorkspaceId }, Ct)).EnsureSuccessStatusCode();
+
+        var offered = (await other.MeAsync()).NewWorkspace;
+        var created = await TestUser.ReadAsync<WorkspaceSummary>(await other.Client.PostAsJsonAsync("/api/workspaces", new { name = "Side project" }, Ct));
+
+        Assert.Equal(new NewWorkspaceResponse(true, ownOrganization), offered);
+        Assert.Equal(ownOrganization, created.OrganizationId);
+    }
+
+    [Fact]
+    public async Task On_a_closed_server_only_owners_and_admins_create_workspaces()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var email = NewEmail();
+        await owner.CreateAsync<SentInvitationResponse>("/invitations", new { email });
+        await using var closed = factory.WithWebHostBuilder(builder => builder.UseSetting("Auth:AllowRegistration", "false"));
+        var member = await TestUser.RegisterAsync(closed, email, CapturingEmailSender.InvitationToken(factory.Emails.LastTo(email)));
+        var closedOwner = closed.CreateClient();
+        closedOwner.DefaultRequestHeaders.Authorization = owner.Client.DefaultRequestHeaders.Authorization;
+
+        var memberCreates = await member.Client.PostAsJsonAsync("/api/workspaces", new { name = "Mine" }, Ct);
+        var ownerCreates = await closedOwner.PostAsJsonAsync("/api/workspaces", new { name = "Second" }, Ct);
+
+        Assert.Equal(new NewWorkspaceResponse(false, null), (await member.MeAsync()).NewWorkspace);
+        Assert.Equal(HttpStatusCode.Forbidden, memberCreates.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, ownerCreates.StatusCode);
+        Assert.Single((await member.MeAsync()).Organizations);
     }
 }

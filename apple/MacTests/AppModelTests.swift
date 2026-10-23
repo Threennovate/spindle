@@ -146,6 +146,31 @@ struct AppModelTests {
         #expect(tokens.read(account: server.url.absoluteString) == "refresh")
     }
 
+    @Test func anInvitedMemberCreatesAWorkspaceOfTheirOwn() async throws {
+        let me = #"""
+        {"id":"u1","email":"ana@example.com","emailConfirmed":true,"fullName":"Ana Kovač","timeZone":"Europe/Zagreb",
+         "preferences":{"weekStart":1,"dateFormat":"dd.MM.yyyy","timeFormat":"24h","durationFormat":"hms","pomodoroEnabled":false,"pomodoroMinutes":25,"pomodoroBreakMinutes":5,"pomodoroAutoStop":false},
+         "defaultWorkspaceId":"w1",
+         "organizations":[{"id":"o1","name":"Firma","role":"member"}],
+         "workspaces":[{"id":"w1","organizationId":"o1","name":"Firma","role":"member"}],
+         "newWorkspace":{"allowed":true,"organizationId":null,"trialDays":90}}
+        """#
+        let server = StubServer { path in
+            switch path {
+            case "/api/auth/login": (200, tokensJSON())
+            case "/api/me": (200, me)
+            default: (404, "{}")
+            }
+        }
+        let model = model(server)
+        await model.start()
+
+        try await model.signIn(email: "ana@example.com", password: "correct horse")
+
+        #expect(model.canCreateWorkspaces)
+        #expect(model.newWorkspaceDescription == "A space of your own, apart from Firma, with its own projects, clients, tags and team. It's not on Firma's plan: it starts its own 90-day free trial.")
+    }
+
     @Test func aWrongPasswordLeavesSignInShowing() async {
         let server = StubServer { _ in (401, #"{"title":"Incorrect email or password.","status":401}"#) }
         let model = model(server)

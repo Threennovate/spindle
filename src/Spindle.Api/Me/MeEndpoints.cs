@@ -7,6 +7,7 @@ using Spindle.Api.Auth;
 using Spindle.Api.Common;
 using Spindle.Api.Operator;
 using Spindle.Api.Subscriptions;
+using Spindle.Api.Workspaces;
 using Spindle.Domain.Organizations;
 using Spindle.Domain.Subscriptions;
 using Spindle.Domain.Workspaces;
@@ -41,6 +42,9 @@ public sealed record MeResponse(
     /// password reset email. Missing means yes, as on servers from before it.
     /// </summary>
     public bool? HasPassword { get; init; }
+
+    /// <summary>Whether the person may create a workspace, and where it would go. Missing on servers from before it.</summary>
+    public NewWorkspaceResponse? NewWorkspace { get; init; }
 }
 
 public sealed record OrganizationSummary(Guid Id, string Name, OrganizationRole Role)
@@ -144,11 +148,12 @@ internal static class MeEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         OrganizationSubscriptions subscriptions,
+        NewWorkspaces newWorkspaces,
         Operators operators,
         CancellationToken cancellationToken)
     {
         var user = await FindAsync(db, principal, cancellationToken);
-        return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(await ToResponseAsync(db, subscriptions, operators, user, cancellationToken));
+        return user is null ? TypedResults.Unauthorized() : TypedResults.Ok(await ToResponseAsync(db, subscriptions, newWorkspaces, operators, user, cancellationToken));
     }
 
     private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult>> UpdateProfileAsync(
@@ -156,6 +161,7 @@ internal static class MeEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         OrganizationSubscriptions subscriptions,
+        NewWorkspaces newWorkspaces,
         Operators operators,
         CancellationToken cancellationToken)
     {
@@ -168,7 +174,7 @@ internal static class MeEndpoints
         user.FullName = request.FullName.Trim();
         user.TimeZone = request.TimeZone;
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, operators, user, cancellationToken));
+        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, newWorkspaces, operators, user, cancellationToken));
     }
 
     private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult, ValidationProblem>> UpdatePreferencesAsync(
@@ -176,6 +182,7 @@ internal static class MeEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         OrganizationSubscriptions subscriptions,
+        NewWorkspaces newWorkspaces,
         Operators operators,
         CancellationToken cancellationToken)
     {
@@ -203,7 +210,7 @@ internal static class MeEndpoints
         user.PomodoroBreakMinutes = request.PomodoroBreakMinutes;
         user.PomodoroAutoStop = request.PomodoroAutoStop;
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, operators, user, cancellationToken));
+        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, newWorkspaces, operators, user, cancellationToken));
     }
 
     private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult>> UpdateFirstStepsAsync(
@@ -211,6 +218,7 @@ internal static class MeEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         OrganizationSubscriptions subscriptions,
+        NewWorkspaces newWorkspaces,
         Operators operators,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
@@ -223,7 +231,7 @@ internal static class MeEndpoints
 
         user.FirstStepsHiddenAt = request.Hidden ? user.FirstStepsHiddenAt ?? timeProvider.GetUtcNow() : null;
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, operators, user, cancellationToken));
+        return TypedResults.Ok(await ToResponseAsync(db, subscriptions, newWorkspaces, operators, user, cancellationToken));
     }
 
     /// <summary>The signed-in person, unless the account was deleted while the access token was still valid.</summary>
@@ -245,6 +253,7 @@ internal static class MeEndpoints
     private static async Task<MeResponse> ToResponseAsync(
         AppDbContext db,
         OrganizationSubscriptions subscriptions,
+        NewWorkspaces newWorkspaces,
         Operators operators,
         AppUser user,
         CancellationToken cancellationToken)
@@ -286,6 +295,9 @@ internal static class MeEndpoints
             IsOperator = operators.Includes(user),
             FirstSteps = user.FirstStepsHiddenAt is null,
             HasPassword = user.PasswordHash is not null,
+            NewWorkspace = newWorkspaces.Describe(
+                organizations,
+                (workspaces.FirstOrDefault(w => w.Id == user.DefaultWorkspaceId) ?? workspaces.FirstOrDefault())?.OrganizationId),
         };
     }
 }

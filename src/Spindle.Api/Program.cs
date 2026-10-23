@@ -87,6 +87,7 @@ builder.Services.AddScoped<SplitSuggestions>();
 builder.Services.AddScoped<AccountEmails>();
 builder.Services.AddScoped<ImportPlanner>();
 builder.Services.AddScoped<OrganizationSubscriptions>();
+builder.Services.AddScoped<NewWorkspaces>();
 builder.Services.AddScoped<TrialReminders>();
 builder.Services.AddHostedService<TrialReminderService>();
 builder.Services.AddMemoryCache();

@@ -2521,6 +2521,7 @@ export interface components {
             isOperator?: null | boolean;
             firstSteps?: null | boolean;
             hasPassword?: null | boolean;
+            newWorkspace?: null | components["schemas"]["NewWorkspaceResponse"];
         };
         NativePasskeyLoginRequest: {
             challengeToken: string;
@@ -2530,6 +2531,13 @@ export interface components {
         NativePasskeyOptionsResponse: {
             optionsJson: string;
             challengeToken: string;
+        };
+        NewWorkspaceResponse: {
+            allowed: boolean;
+            /** Format: uuid */
+            organizationId: null | string;
+            /** Format: int32 */
+            trialDays?: null | number;
         };
         OAuthAuthorizationPreview: {
             clientName: string;

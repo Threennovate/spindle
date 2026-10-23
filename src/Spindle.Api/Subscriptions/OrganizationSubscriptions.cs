@@ -16,8 +16,11 @@ internal sealed class OrganizationSubscriptions(AppDbContext db, IOptions<Subscr
 {
     public bool Enabled => options.Value.Enabled;
 
+    /// <summary>How long the trial of a new organization lasts.</summary>
+    public int TrialDays => options.Value.TrialDays;
+
     /// <summary>
-    /// Starts the trial of an organization made at sign-up, in the current price cohort, which it keeps. A self-hosted
+    /// Starts the trial of a new organization of someone's own, in the current price cohort, which it keeps. A self-hosted
     /// server records it too, so every organization has a subscription row whether or not anyone looks at it.
     /// </summary>
     public void StartTrial(Guid organizationId) => db.OrganizationSubscriptions.Add(OrganizationSubscription.StartTrial(

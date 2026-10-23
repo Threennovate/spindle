@@ -59,6 +59,24 @@ public sealed class SubscriptionTests(PostgresApiFactory factory)
     }
 
     [Fact]
+    public async Task A_members_own_organization_has_its_own_trial_and_seats()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var team = Assert.Single((await owner.MeAsync()).Organizations).Id;
+        var member = await factory.AddMemberAsync(owner);
+        var before = DateTimeOffset.UtcNow;
+
+        var created = await TestUser.ReadAsync<WorkspaceSummary>(await member.Client.PostAsJsonAsync("/api/workspaces", new { name = "Consulting" }, Ct));
+        var own = await SubscriptionAsync(member, created.OrganizationId);
+
+        Assert.Equal(SubscriptionStatus.Trialing, own.Status);
+        Assert.InRange(own.TrialEndsAt!.Value, before.AddDays(90), DateTimeOffset.UtcNow.AddDays(90));
+        Assert.Equal(1, own.Seats);
+        // The team still pays for them, but nothing more.
+        Assert.Equal(2, (await SubscriptionAsync(owner, team)).Seats);
+    }
+
+    [Fact]
     public async Task Only_the_organizations_owners_and_admins_see_its_plan()
     {
         var owner = await TestUser.RegisterAsync(factory);

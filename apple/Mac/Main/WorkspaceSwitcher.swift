@@ -82,7 +82,7 @@ private struct NewWorkspaceSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("New workspace")
                     .font(.title2.weight(.semibold))
-                Text("A separate space with its own projects, clients, tags and team. You become its admin.")
+                Text(model.newWorkspaceDescription)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
