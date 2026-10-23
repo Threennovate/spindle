@@ -48,7 +48,9 @@ internal sealed class NewWorkspaces(AppDbContext db, OrganizationSubscriptions s
 
     /// <summary>
     /// Creates the workspace where <see cref="Describe"/> says, with the person as its admin, and switches them to it.
-    /// Null when they may not create one. The caller saves the changes.
+    /// Null when they may not create one. The caller saves the changes; when the person started an organization of their
+    /// own at the same moment, saving fails with <see cref="DbUpdateConcurrencyException"/>, and creating again puts
+    /// the workspace in that organization.
     /// </summary>
     public async Task<WorkspaceSummary?> CreateAsync(AppUser user, string name, CancellationToken cancellationToken)
     {
@@ -68,6 +70,13 @@ internal sealed class NewWorkspaces(AppDbContext db, OrganizationSubscriptions s
         if (!target.Allowed)
         {
             return null;
+        }
+
+        if (target.OrganizationId is null)
+        {
+            // Two requests at once would each find no organization of the person's own and start one, each with a
+            // trial. A new stamp makes saving the person fail for the later one, which then starts over.
+            user.ConcurrencyStamp = Guid.NewGuid().ToString();
         }
 
         var workspace = target.OrganizationId is { } organizationId

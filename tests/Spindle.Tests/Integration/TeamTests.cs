@@ -240,6 +240,20 @@ public sealed class TeamTests(PostgresApiFactory factory)
     }
 
     [Fact]
+    public async Task A_member_creating_workspaces_at_once_starts_one_organization_of_their_own()
+    {
+        var owner = await TestUser.RegisterAsync(factory);
+        var member = await factory.AddMemberAsync(owner);
+
+        var responses = await Task.WhenAll(Enumerable.Range(1, 4).Select(i => member.Client.PostAsJsonAsync("/api/workspaces", new { name = $"Mine {i}" }, Ct)));
+        var created = await Task.WhenAll(responses.Select(TestUser.ReadAsync<WorkspaceSummary>));
+
+        var own = Assert.Single((await member.MeAsync()).Organizations, o => o.Role == OrganizationRole.Owner);
+        Assert.All(created, workspace => Assert.Equal(own.Id, workspace.OrganizationId));
+        Assert.Equal(2, (await member.MeAsync()).Organizations.Count);
+    }
+
+    [Fact]
     public async Task An_owner_working_in_another_organization_creates_workspaces_in_their_own()
     {
         var owner = await TestUser.RegisterAsync(factory);

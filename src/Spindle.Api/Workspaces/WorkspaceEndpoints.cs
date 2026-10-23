@@ -55,15 +55,26 @@ internal static class WorkspaceEndpoints
         CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId();
-        var user = await db.Users.SingleAsync(u => u.Id == userId, cancellationToken);
-        var workspace = await newWorkspaces.CreateAsync(user, request.Name, cancellationToken);
-        if (workspace is null)
+        for (var attempt = 1; ; attempt++)
         {
-            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only organization owners and admins can create workspaces on this server.");
-        }
+            var user = await db.Users.SingleAsync(u => u.Id == userId, cancellationToken);
+            var workspace = await newWorkspaces.CreateAsync(user, request.Name, cancellationToken);
+            if (workspace is null)
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Only organization owners and admins can create workspaces on this server.");
+            }
 
-        await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Created((string?)null, workspace);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return TypedResults.Created((string?)null, workspace);
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 3)
+            {
+                // Another request started the person's own organization first: look again, and go in it.
+                db.ChangeTracker.Clear();
+            }
+        }
     }
 
     /// <summary>Switches the workspace the user works in, on every device.</summary>

@@ -80,4 +80,12 @@ class PlanTest {
         assertEquals("A space of your own, apart from Firma, with its own projects, clients, tags and team. It's not on Firma's plan: it starts its own 90-day free trial.", state.newWorkspaceDescription)
         assertFalse(AppState(me = me.copy(newWorkspace = null), workspaceId = "one").canCreateWorkspaces)
     }
+
+    @Test fun `on an older server an owner working in another organization still creates workspaces`() {
+        val me = MeResponse(
+            workspaces = listOf(WorkspaceSummary(id = "one", organizationId = "a")),
+            organizations = listOf(OrganizationSummary(id = "a", name = "Firma", role = "member"), OrganizationSummary(id = "b", name = "Ana Horvat", role = "owner")),
+        )
+        assertTrue(AppState(me = me, workspaceId = "one").canCreateWorkspaces)
+    }
 }

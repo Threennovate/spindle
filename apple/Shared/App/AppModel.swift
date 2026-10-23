@@ -148,10 +148,10 @@ final class AppModel {
     }
 
     /// Whether the person may create a workspace, as the server says. A server from before it said nothing let owners
-    /// and admins of the current workspace's organization create them.
+    /// and admins of any organization create them.
     var canCreateWorkspaces: Bool {
-        guard let me, let workspace else { return false }
-        return me.newWorkspace?.allowed ?? me.organizations.contains { $0.id == workspace.organizationId && $0.role != .member }
+        guard let me else { return false }
+        return me.newWorkspace?.allowed ?? me.organizations.contains { $0.role != .member }
     }
 
     /// Says what a new workspace is and where it goes, before the person creates it.

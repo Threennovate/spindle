@@ -14,7 +14,7 @@ export function useWorkspace() {
     workspace,
     workspaceId: workspace.id,
     isAdmin: workspace.role === 'admin',
-    canCreateWorkspaces: newWorkspaceAllowed(me, workspace),
+    canCreateWorkspaces: newWorkspaceAllowed(me),
     timeZone: me.timeZone,
     weekStartsOn: me.preferences.weekStart as WeekStart,
     hour12: me.preferences.timeFormat === '12h',
@@ -34,10 +34,10 @@ type Workspace = Me['workspaces'][number]
 
 /**
  * Whether the person may create a workspace, as the server says. A server from before it said nothing let owners and
- * admins of the current workspace's organization create them.
+ * admins of any organization create them.
  */
-function newWorkspaceAllowed(me: Me, workspace: Workspace): boolean {
-  return me.newWorkspace?.allowed ?? me.organizations.some((o) => o.id === workspace.organizationId && o.role !== 'member')
+function newWorkspaceAllowed(me: Me): boolean {
+  return me.newWorkspace?.allowed ?? me.organizations.some((o) => o.role !== 'member')
 }
 
 /** Says what a new workspace is and where it goes, before the person creates it. */

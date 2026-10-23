@@ -172,11 +172,10 @@ val AppState.isAdmin: Boolean get() = me?.workspaces?.find { it.id == workspaceI
 fun workspaceAdmin(state: AppState): Boolean = state.isAdmin
 val AppState.canCreateProjects: Boolean get() = isAdmin || settings?.onlyAdminsCreateProjects == false
 val AppState.canCreateTags: Boolean get() = isAdmin || settings?.onlyAdminsCreateTags == false
-/** As the server says; a server from before it said nothing let owners and admins of the current workspace's organization create them. */
+/** As the server says; a server from before it said nothing let owners and admins of any organization create them. */
 val AppState.canCreateWorkspaces: Boolean get() {
     val me = me ?: return false
-    val organizationId = me.workspaces.find { it.id == workspaceId }?.organizationId
-    return me.newWorkspace?.allowed ?: me.organizations.any { it.id == organizationId && it.role != "member" }
+    return me.newWorkspace?.allowed ?: me.organizations.any { it.role == "owner" || it.role == "admin" }
 }
 
 /** Says what a new workspace is and where it goes, before the person creates it. */
